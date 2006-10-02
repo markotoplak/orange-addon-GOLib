@@ -23,6 +23,12 @@ typedef struct{
 	TermNode* tail;
 } TermList;
 
+TermList* makeTermList(){
+	TermList *list=malloc(sizeof(TermList));
+	memset(list, 0, sizeof(TermList));
+	return list;
+}
+
 void addTermNode(TermList* list, TermNode* node){
 	TermNode* tmp=list->head;
 	list->head=node;
@@ -61,6 +67,12 @@ typedef struct {
 	GeneEvidenceNode* head;
 	GeneEvidenceNode* tail;
 } GeneEvidenceList;
+
+GeneEvidenceList* makeGeneEvidenceList(){
+	GeneEvidenceList *list=malloc(sizeof(GeneEvidenceList));
+	memset(list, 0, sizeof(GeneEvidenceList));
+	return list;
+}
 
 void addGeneEvidenceNode(GeneEvidenceList* list, GeneEvidenceNode* node){
 	GeneEvidenceNode* tmp=list->head;
@@ -189,6 +201,7 @@ typedef struct{
 	char* goID;
 	GeneEvidenceList mappedGenes;
 	TermList parents;
+	TermList children;
 	int numRef;
 	int code;
 	char visited;
@@ -255,6 +268,7 @@ static void Ontology_dealloc(Ontology* self){
 			node=node->next;
 		}
 		clearTermList(&term->parents);
+		clearTermList(&term->children);
 
 		free(term->goID);
 		term++;
@@ -380,6 +394,8 @@ GOTerm makeGOTerm(PyObject* tuple){
 		}
 		term.goID=id;
 		term.parents=parentList;
+		term.children.head=NULL;
+		term.children.tail=NULL;
 		return term;
 	}
 	else{
@@ -387,6 +403,8 @@ GOTerm makeGOTerm(PyObject* tuple){
 		term.goID="Uninitialized GO Term";
 		term.parents.head=NULL;
 		term.parents.tail=NULL;
+		term.children.head=NULL;
+		term.children.tail=NULL;
 		return term;
 	}
 }	
@@ -439,6 +457,17 @@ PyObject* parseGOTerms(PyObject* self, PyObject* args){
 		(*ptr)=makeGOTerm(item);
 		hash_add(hash, ptr->goID, ptr);
 		Py_DECREF(item);
+		ptr++;
+	}
+	ptr=goTerms;
+	while(ptr->goID){
+		TermNode* node=ptr->parents.head;
+		while(node){
+			GOTerm* term=hash_get(hash, node->id);
+			if(term!=HASH_MISS)
+				addTermNode(&term->children, makeTermNode(ptr->goID));
+			node=node->next;
+		}
 		ptr++;
 	}
 	Py_DECREF(iter);
@@ -555,7 +584,6 @@ void clearVisited(Ontology* go){
  the ones that are allready marked as direct  */
 void _slimMapping2(GOTerm* term, Ontology* ontology, Ontology* slimOntology, TermList* list){
 	GOTerm* parent=NULL;
-	TermNode* node=NULL;
 	TermNode* parentNode=NULL;
 	parentNode=term->parents.head;
 	while(parentNode){
@@ -571,7 +599,6 @@ void _slimMapping2(GOTerm* term, Ontology* ontology, Ontology* slimOntology, Ter
 
 void _slimMapping1(GOTerm* term, Ontology* ontology, Ontology* slimOntology, TermList* list){
 	GOTerm* parent=NULL;
-	TermNode* node=NULL;
 	TermNode* parentNode=NULL;
 	parentNode=term->parents.head;
 	while(parentNode){
@@ -617,7 +644,7 @@ TermList* findTerms(char** geneName, int evidence, int aspect, char slimsOnly, c
 	while(*geneName){
 		AnnRecord* ann=NULL;
 		count++;
-		if(callback && count%step==0)
+		if(callback && count%step==0 && start<=100)
 			PyObject_CallFunction(callback, "i", start++);
 
 		if((ann=getAnnRecord(annotation, *geneName))==HASH_MISS){
@@ -738,7 +765,7 @@ void freeMappedStrings(char** ptr){
 double logbinomial(int n, int r){
 	double sum=0;
 	int i=0;
-	int t=(n-r+1>2)? n-r+1 : 2;
+	//int t=(n-r+1>2)? n-r+1 : 2;
 	for(i=n;i>=n-r+1;i--)
 		sum+=log(i);
 	for(i=2;i<=r;i++)
@@ -969,9 +996,145 @@ PyObject* findGenes(PyObject* self, PyObject* args){
 	return result;
 }
 
+void collectAllChildrenTerms(GOTerm* term, Ontology* ontology, TermList *list, hash_table* hash){
+	TermNode* tnode=NULL;
+	if(!hash_has_key(hash, term->goID)){
+		addTermNode(list, makeTermNode(term->goID));
+		hash_add(hash, term->goID, (void*)42);
+	}
+	tnode=term->children.head;
+	while(tnode){
+		term=getGOTerm(ontology, tnode->id);
+		if(term!=HASH_MISS)
+			collectAllChildrenTerms(term, ontology, list, hash);
+		tnode=tnode->next;
+	}
+}
 
+PyObject* findGenes2(PyObject* self, PyObject* args){
+	PyObject* pyTerms=NULL;
+	PyObject* result=NULL;
+	PyObject* callback=NULL;
+	Ontology* ontology=NULL;
+	Annotation* annotation=NULL;
+	GOTerm* term=NULL;
+	char directAnnotation=0;
+	char reportEvidence=0;
+	int evidence=0;
+	char** terms=NULL;
+	char** geneNames=NULL;
+	hash_table *hash=NULL;
+	TermNode *tnode=NULL;
+	GeneEvidenceList *gelist=NULL;
+	GeneEvidenceNode *genode=NULL;
+	AnnRecord *ann=NULL;
+	char* lastName="No GeNe NaMe 42";
+	char** id=NULL;
+	int numTerms=0;
+	int numGenes=0;
+	TermList *allTerms=makeTermList();
+	if(!PyArg_ParseTuple(args, "OibbO!O!|O:findGenes", &pyTerms, &evidence, &reportEvidence, &directAnnotation,
+		&go_AnnotationType, &annotation, &go_OntologyType, &ontology, &callback)){
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	if(callback==Py_None || !PyCallable_Check(callback))
+		callback=NULL;
+	terms=mapStrings(pyTerms);
 
-
+	id=terms;
+	hash=makeHashTable(PyList_Size(pyTerms));
+	while(*id){
+		hash_add(hash, *id, (void*)42);
+		id++;
+	}
+	if(!directAnnotation){
+		hash_table * tmphash=makeHashTable(PyList_Size(pyTerms)*20);
+		id=terms;
+		while(*id){
+			if((term=getGOTerm(ontology, *id))!=HASH_MISS)
+				collectAllChildrenTerms(term, ontology, allTerms, tmphash);
+			id++;
+		}
+		tnode=allTerms->head;
+		while(tnode){
+			numTerms++;
+			tnode=tnode->next;
+		}
+		freeMappedStrings(terms);
+		terms=malloc(sizeof(char*)*(numTerms+1));
+		tnode=allTerms->head;
+		id=terms;
+		while(tnode){
+			*id=tnode->id;
+			id++;
+			tnode=tnode->next;
+		}
+		*id=NULL;
+	}
+	gelist=makeGeneEvidenceList();
+	ann=annotation->annotation;
+	while(ann->name){
+		if(hash_has_key(hash, ann->goID) && strcmp(ann->name, lastName)){
+			addGeneEvidenceNode(gelist, makeGeneEvidenceNode(ann->name, 4095));
+			lastName=ann->name;
+		}
+		ann++;
+	}
+	genode=gelist->head;
+	while(genode){
+		numGenes++;
+		genode=genode->next;
+	}
+	geneNames=malloc(sizeof(char*)*(numGenes+1));
+	genode=gelist->head;
+	id=geneNames;
+	while(genode){
+		*id=genode->geneName;
+		id++;
+		genode=genode->next;
+	}
+	*id=NULL;
+	clearTermList(allTerms);
+	allTerms=findTerms(geneNames, 4095, 7, 0, (char)!directAnnotation, annotation, ontology, NULL, callback, numGenes/100, 0);
+	
+	tnode=allTerms->head;
+	result=PyDict_New();
+	while(tnode){
+		if((term=getGOTerm(ontology, tnode->id))==HASH_MISS || !hash_has_key(hash, tnode->id)){
+			tnode=tnode->next;
+			continue;
+		}
+		genode=term->mappedGenes.head;
+		while(genode){
+			if(PyMapping_HasKeyString(result, genode->geneName)){
+				PyObject* l=PyMapping_GetItemString(result, genode->geneName);
+				PyObject* val=(reportEvidence)? Py_BuildValue("(si)", tnode->id, genode->evidence) : Py_BuildValue("s", tnode->id);
+				PyList_Append(l, val);
+				Py_DECREF(l);
+				Py_DECREF(val);
+			} else{
+				PyObject* l=PyList_New(0);
+				PyObject* val=(reportEvidence)? Py_BuildValue("(si)", tnode->id, genode->evidence) : Py_BuildValue("s", tnode->id);
+				PyList_Append(l, val);
+				PyMapping_SetItemString(result, genode->geneName, l);
+				Py_DECREF(l);
+				Py_DECREF(val);
+			}
+			genode=genode->next;
+		}
+		tnode=tnode->next;
+	}
+	prepareGOTerms(ontology);
+	freeMappedStrings(terms);
+	free(geneNames);
+	freeHashTable(hash);
+	clearTermList(allTerms);
+	clearGeneEvidenceList(gelist);
+	free(allTerms);
+	free(gelist);
+	return result;
+}
 
 PyObject* mapToSlims(PyObject* self, PyObject* arg){
 	Ontology* ontology=NULL;
@@ -1017,7 +1180,7 @@ static PyMethodDef go_methods[] = {
 	{"GOTermFinder", (PyCFunction)GOTermFinder, METH_VARARGS, "Maps a list of gene names to relevant terms. Arguments(list of gene names, list of refernece genes, slims only, evidence, aspect, annotation, ontology, slim ontology, callback"},
 	{"findTerms", (PyCFunction)findGOTerms, METH_VARARGS, "Maps a list of gene names to terms. Arguments(list of gene names, slims only, direct annotation, evidence, report evidence,  annotation, ontology, slim ontology"},
 	{"mapToSlims", (PyCFunction)mapToSlims, METH_VARARGS, "Maps a term to slim terms. Arguments: (term id, full ontology, slim ontology)"},
-	{"findGenes", (PyCFunction)findGenes, METH_VARARGS, "Given a list of GO term id's finds all genes that map to this terms. Arguments: (list of GO term id's, evidence, report evidence, direct annotation only, anotation, ontology "},
+	{"findGenes", (PyCFunction)findGenes2, METH_VARARGS, "Given a list of GO term id's finds all genes that map to this terms. Arguments: (list of GO term id's, evidence, report evidence, direct annotation only, anotation, ontology "},
     {NULL}  /* Sentinel */
 };
 
