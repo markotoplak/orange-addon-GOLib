@@ -212,8 +212,8 @@ def setSlims(slims=None):
         else:
             goslims=filter(lambda t:slims in t.__dict__.get("subset",[]) , loadedGO.terms)
         loadedSlimGO=GeneOntologyDB()
-        loadedSlimGO.ontology=_GOLib.parseGOTerms([g.toTuple() for g in goslims])
-        loadedSlimGO.ontology.aliasMapper=loadedGO.aliasMapper
+        loadedSlimGO.ontology=_GOLib.parseGOTerms([g.toTuple() for g in goslims], loadedGO.aliasMapper)
+        #loadedSlimGO.ontology.aliasMapper=loadedGO.aliasMapper
         loadedSlimGO.terms=goslims
         loadedSlimGO.termDict=loadedGO.termDict
         loadedSlimGO.aliasMapper=loadedGO.aliasMapper
@@ -227,7 +227,8 @@ def downloadGO():
     """Downloads the curent gene ontology from http://www.geneontology.org/ontology/gene_ontology.obo"""
     urlretrieve("http://www.geneontology.org/ontology/gene_ontology.obo", data_dir+"//gene_ontology.obo")
     file=open(data_dir+"//gene_ontology.obo")
-    data=file.read()
+    lines=file.read()
+    file.close()
     c=re.compile("\[Term\].*?\n\n",re.DOTALL)
     match=c.findall(lines)
     go=parseGeneOntology(match)
@@ -244,6 +245,7 @@ def downloadAnnotation(organizm="sgd"):
     file.writelines(data)
     __splitAnnotation(data, organizm)
     anno=parseAnnotation(data)
+    file.close()
     import cPickle
     cPickle.dump(anno, open(data_dir+"//gene_association."+organizm+".PyAnnotationDB", "w"))
 
@@ -256,6 +258,7 @@ def listOrganizms():
         print "Failed to connect to http://www.geneontology.org/GO.current.annotations.shtml. Trying to find a local copy"
     file=open(data_dir+"//annotations.shtml")
     data=file.read()
+    file.close()
     match=re.findall(r'http://www\.geneontology\.org/cgi-bin/downloadGOGA\.pl/gene_association\..+?gz', data)
 
     organizms=[]
@@ -293,11 +296,12 @@ def loadOntologyFrom(filename):
     else:
         file=open(filename)
         data=file.read()
+        file.close()
         c=re.compile("\[Term\].*?\n\n",re.DOTALL)
         match=c.findall(data)
         db=parseGeneOntology(match)
-    db.ontology=_GOLib.parseGOTerms([t.toTuple() for t in db.terms])
-    db.ontology.aliasMapper=db.aliasMapper
+    db.ontology=_GOLib.parseGOTerms([t.toTuple() for t in db.terms], db.aliasMapper)
+    #db.ontology.aliasMapper=db.aliasMapper
     db.__file__=filename
     return db
 
@@ -341,9 +345,10 @@ def loadAnnotationFrom(filename):
         file=open(filename)
         data=file.readlines()
         anno=parseAnnotation(data)
+        file.close()
         
-    anno.annotation=_GOLib.parseAnnotation([a.toTuple() for a in anno.annotationList if "NOT" not in a.Qualifier])
-    anno.annotation.aliasMapper=anno.aliasMapper
+    anno.annotation=_GOLib.parseAnnotation([a.toTuple() for a in anno.annotationList if "NOT" not in a.Qualifier], anno.aliasMapper)
+    #anno.annotation.aliasMapper=anno.aliasMapper
     anno.__file__=filename
     return anno
     
@@ -368,8 +373,8 @@ def __test():
     print "Extracting GO Dag"
     print extractGODAG(terms.keys())
     print "Finding genes"
-    print findGenes(terms.keys()[:min(len(terms.keys()),3)], progressCallback=call)
-    print findGenes(["GO:0005763","GO:0003735","GO:0042255","GO:0043037"], progressCallback=call)
+    print findGenes(terms.keys()[:min(len(terms.keys()),3)], progressCallback=call)#,directAnnotationOnly=True)
+    print findGenes(["GO:0005763","GO:0003735","GO:0042255","GO:0043037"], progressCallback=call)#,directAnnotationOnly=True)
     
 if __name__=="__main__":
     __test()

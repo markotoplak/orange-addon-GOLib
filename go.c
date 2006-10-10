@@ -431,13 +431,14 @@ PyObject* parseGOTerms(PyObject* self, PyObject* args){
 	PyObject* terms=NULL;
 	PyObject* iter=NULL;
 	PyObject* item=NULL;
+	PyObject* aliasMapper=Py_None;
 	GOTerm* goTerms=NULL;
 	GOTerm* ptr=NULL;
 	hash_table* hash=NULL;
 	Ontology *base=NULL;
 	int nTerms=0;
 	int maxTerms=0;
-	if(!PyArg_ParseTuple(args, "O:parseGOTerms", &terms)){
+	if(!PyArg_ParseTuple(args, "O|O:parseGOTerms", &terms, &aliasMapper)){
 		Py_INCREF(Py_None);
 		return Py_None;
 	}
@@ -459,23 +460,23 @@ PyObject* parseGOTerms(PyObject* self, PyObject* args){
 		Py_DECREF(item);
 		ptr++;
 	}
+	Py_DECREF(iter);
+	base=(Ontology*)go_OntologyType.tp_new(&go_OntologyType, NULL, NULL);
+	base->terms=goTerms;
+	base->hash=hash;
+	base->aliasMapper=aliasMapper;
+	Py_INCREF(aliasMapper);
 	ptr=goTerms;
 	while(ptr->goID){
 		TermNode* node=ptr->parents.head;
 		while(node){
-			GOTerm* term=hash_get(hash, node->id);
+			GOTerm* term=getGOTerm(base, node->id);
 			if(term!=HASH_MISS)
 				addTermNode(&term->children, makeTermNode(ptr->goID));
 			node=node->next;
 		}
 		ptr++;
 	}
-	Py_DECREF(iter);
-	base=(Ontology*)go_OntologyType.tp_new(&go_OntologyType, NULL, NULL);
-	base->terms=goTerms;
-	base->hash=hash;
-	base->aliasMapper=Py_None;
-	Py_INCREF(Py_None);
 	return (PyObject*)base;
 }
 	
@@ -483,6 +484,7 @@ PyObject* parseAnnotation(PyObject* self, PyObject* args){
 	PyObject* ann=NULL;
 	PyObject* iter=NULL;
 	PyObject* item=NULL;
+	PyObject* aliasMapper=Py_None;
 	AnnRecord* annotation=NULL;
 	AnnRecord* ptr=NULL;
 	Annotation* annot=NULL;
@@ -491,7 +493,7 @@ PyObject* parseAnnotation(PyObject* self, PyObject* args){
 	char* lastName="I'm Bender baby! Please insert liquor!";
 	int nAnn=0;
 	int annSize=0;
-	if(!PyArg_ParseTuple(args, "O:parseAnnotation", &ann)){
+	if(!PyArg_ParseTuple(args, "O|O:parseAnnotation", &ann, &aliasMapper)){
 		Py_INCREF(Py_None);
 		return Py_None;
 	}
@@ -520,8 +522,8 @@ PyObject* parseAnnotation(PyObject* self, PyObject* args){
 	annot=(Annotation*)go_AnnotationType.tp_new(&go_AnnotationType, NULL, NULL);
 	annot->annotation=annotation;
 	annot->hash=hash;
-	annot->aliasMapper=Py_None;
-	Py_INCREF(Py_None);
+	annot->aliasMapper=aliasMapper;
+	Py_INCREF(aliasMapper);
 	return (PyObject*)annot; 
 }
 
