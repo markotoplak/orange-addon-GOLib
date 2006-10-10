@@ -226,13 +226,13 @@ def getSlims():
 def downloadGO():
     """Downloads the curent gene ontology from http://www.geneontology.org/ontology/gene_ontology.obo"""
     urlretrieve("http://www.geneontology.org/ontology/gene_ontology.obo", data_dir+"//gene_ontology.obo")
-    file=open(data_dir+"//gene_ontology.obo")
-    lines=file.read()
-    file.close()
-    c=re.compile("\[Term\].*?\n\n",re.DOTALL)
-    match=c.findall(lines)
-    go=parseGeneOntology(match)
-    cPickle.dump(go, open(data_dir+"gene_ontology.obo.PyOntologyDB", "w"))
+    #file=open(data_dir+"//gene_ontology.obo")
+    #lines=file.read()
+    #file.close()
+    #c=re.compile("\[Term\].*?\n\n",re.DOTALL)
+    #match=c.findall(lines)
+    #go=parseGeneOntology(match)
+    #cPickle.dump(go, open(data_dir+"gene_ontology.obo.PyOntologyDB", "w"))
 
 def downloadAnnotation(organizm="sgd"):
     """Downloads the annotation for the specified organizm (e.g. "sgd", "fb", "mgi",...)"""
@@ -243,11 +243,11 @@ def downloadAnnotation(organizm="sgd"):
     data=gfile.readlines()
     file=open(data_dir+"//gene_association."+organizm,"w")
     file.writelines(data)
-    __splitAnnotation(data, organizm)
-    anno=parseAnnotation(data)
     file.close()
-    import cPickle
-    cPickle.dump(anno, open(data_dir+"//gene_association."+organizm+".PyAnnotationDB", "w"))
+    #__splitAnnotation(data, organizm)
+    #anno=parseAnnotation(data)
+    #import cPickle
+    #cPickle.dump(anno, open(data_dir+"//gene_association."+organizm+".PyAnnotationDB", "w"))
 
 def listOrganizms():
     """Connect to http://www.geneontology.org/GO.current.annotations.shtml, parse out the organism names
