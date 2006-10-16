@@ -4,7 +4,9 @@
 #include<stdio.h>
 
 #define RAISE_TYPE_ERROR(error) PyErr_SetString(PyExc_TypeError, error); Py_INCREF(PyExc_TypeError);
-
+#ifndef MAX
+#define MAX(a,b) (((a)<(b))?(b):(a))
+#endif
 struct _TermNode;
 typedef struct _TermNode{
 	char* id;
@@ -823,9 +825,9 @@ PyObject* GOTermFinder(PyObject *self, PyObject* args){
 	refGenes=mapStrings(pyRefGenes);
 	prepareGOTerms(ontology);
 	//printf("mapping ref\n");
-	mapReferenceGenes(refGenes, evidence, aspect, annotation, ontology, callback, progressStep, 0);
+	mapReferenceGenes(refGenes, evidence, aspect, annotation, ontology, callback, MAX(numRefGenes/100,1), 0);
 	//printf("finding terms\n");
-	list=findTerms(genes, evidence, aspect, slimsOnly, 1, annotation, ontology, slimOntology, callback, progressStep, numRefGenes/progressStep);
+	list=findTerms(genes, evidence, aspect, slimsOnly, 1, annotation, ontology, slimOntology, callback, MAX(numGenes/100,1), 0);
 	node=list->head;
 	result=PyDict_New();
 	while(node){
