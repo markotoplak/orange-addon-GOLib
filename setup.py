@@ -10,5 +10,6 @@ setup(name="GOLib",
       ext_modules=[module],
       py_modules=["go"],
       packages=["data"],
-      extra_path="GOLib"
+      extra_path="GOLib",
+      scripts=["post_install_script.py"]
       )
