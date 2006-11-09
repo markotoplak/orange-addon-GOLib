@@ -118,6 +118,7 @@ hash_entry* makeHashEntry(char* key, void* ptr){
 
 unsigned int hash_fun(char* key, int maxVal){
 	unsigned int sum=0;
+	maxVal=MAX(maxVal, 1);
 	while(*key){
 		sum=sum*131+ *key;
 		key++;
@@ -173,7 +174,7 @@ char hash_has_key(hash_table* hash, char* key){
 
 hash_table* makeHashTable(int buckets){
 	hash_table* hash=malloc(sizeof(hash_table));
-	hash->buckets=buckets;
+	hash->buckets=MAX(buckets,1);
 	hash->entries=malloc(sizeof(hash_entry)*buckets);
 	memset(hash->entries, 0, sizeof(hash_entry)*buckets);
 	return hash;
@@ -221,6 +222,7 @@ typedef struct{
 	PyObject* aliasMapper;
 	hash_table* hash;
 	AnnRecord* annotation;
+	int numGenes;
 } Annotation;
 
 static PyMemberDef Annotation_members[]={
@@ -441,13 +443,11 @@ PyObject* parseGOTerms(PyObject* self, PyObject* args){
 	int nTerms=0;
 	int maxTerms=0;
 	if(!PyArg_ParseTuple(args, "O|O:parseGOTerms", &terms, &aliasMapper)){
-		Py_INCREF(Py_None);
-		return Py_None;
+		return NULL;
 	}
 	if(!PyList_Check(terms)){
 		RAISE_TYPE_ERROR("Wrong argument type. Need a list");
-		Py_INCREF(Py_None);
-		return Py_None;
+		return NULL;
 	}
 	nTerms=PyList_Size(terms);
 	maxTerms=nTerms+1;
@@ -495,14 +495,13 @@ PyObject* parseAnnotation(PyObject* self, PyObject* args){
 	char* lastName="I'm Bender baby! Please insert liquor!";
 	int nAnn=0;
 	int annSize=0;
+	int numGenes=0;
 	if(!PyArg_ParseTuple(args, "O|O:parseAnnotation", &ann, &aliasMapper)){
-		Py_INCREF(Py_None);
-		return Py_None;
+		return NULL;
 	}
 	if(!PyList_Check(ann)){
 		RAISE_TYPE_ERROR("Need a list");
-		Py_INCREF(Py_None);
-		return Py_None;
+		return NULL;
 	}
 	iter=PyObject_GetIter(ann);
 	nAnn=PyList_Size(ann);
@@ -516,6 +515,7 @@ PyObject* parseAnnotation(PyObject* self, PyObject* args){
 		if(strcmp(ptr->name, lastName)){
 			hash_add(hash, ptr->name, ptr);
 			lastName=ptr->name;
+			numGenes++;
 		}
 		ptr++;
 		Py_DECREF(item);
@@ -525,6 +525,7 @@ PyObject* parseAnnotation(PyObject* self, PyObject* args){
 	annot->annotation=annotation;
 	annot->hash=hash;
 	annot->aliasMapper=aliasMapper;
+	annot->numGenes=numGenes;
 	Py_INCREF(aliasMapper);
 	return (PyObject*)annot; 
 }
@@ -647,6 +648,7 @@ TermList* findTerms(char** geneName, int evidence, int aspect, char slimsOnly, c
 
 	while(*geneName){
 		AnnRecord* ann=NULL;
+		char *mappedGeneName=NULL;
 		count++;
 		if(callback && count%step==0 && start<=100)
 			PyObject_CallFunction(callback, "i", start++);
@@ -657,7 +659,8 @@ TermList* findTerms(char** geneName, int evidence, int aspect, char slimsOnly, c
 			continue;
 		}
 		
-		while(ann->name && !strcmp(ann->name, *geneName)){
+		mappedGeneName=ann->name;
+		while(ann->name && !strcmp(ann->name, mappedGeneName)){
 			if((ann->aspect & aspect) && (evidence & ann->evidence)){
 				TermList termList;
 				TermNode* node=NULL;
@@ -707,6 +710,7 @@ void mapReferenceGenes(char** geneName, int evidence, int aspect, Annotation* an
 	int count=0;
 	while(*geneName){
 		AnnRecord* ann=NULL;
+		char *mappedGeneName=NULL;
 		count++;
 		if(callback && count%step==0)
 			PyObject_CallFunction(callback, "i",start++);
@@ -716,8 +720,9 @@ void mapReferenceGenes(char** geneName, int evidence, int aspect, Annotation* an
 			geneName++;
 			continue;
 		}
+		mappedGeneName=ann->name;
 		//printf("%s, %s\n", *geneName, ann->name);
-		while(ann->name && strcmp(ann->name, *geneName)==0){
+		while(ann->name && strcmp(ann->name, mappedGeneName)==0){
 			//printf("mapping term %s\n", ann->goID);
 			if((term=getGOTerm(ontology, ann->goID))==HASH_MISS){
 				ann++;
@@ -770,19 +775,19 @@ double logbinomial(int n, int r){
 	double sum=0;
 	int i=0;
 	//int t=(n-r+1>2)? n-r+1 : 2;
-	for(i=n;i>=n-r+1;i--)
+	for(i=n;i>=n-r+1;--i)
 		sum+=log(i);
-	for(i=2;i<=r;i++)
+	for(i=2;i<=r;++i)
 		sum-=log(i);
 	return sum;
 }
 		
-double p_value(int nRef, int nRefMapped, int nGenes, int nGenesMapped){
+double p_value(int nClusterGenes, int nGenes, int nGenesMapped){
 	double sum=0;
 	double p=(double)nGenesMapped/(double)nGenes;
 	int i=0;
-	for(i=nGenesMapped;i<nGenes;i++)
-		sum+=exp(logbinomial(nGenes, i)+i*log(p)+(nGenes-i)*log(p));
+	for(i=nGenesMapped;i<nClusterGenes;i++)
+		sum+=exp(logbinomial(nGenes, i)+i*log(p)+(nGenes-i)*log(1-p));
 	return sum;
 }
 
@@ -805,15 +810,13 @@ PyObject* GOTermFinder(PyObject *self, PyObject* args){
 	TermList* list=NULL;
 	TermNode* node=NULL;
 	//printf("Arg parsing\n");
-	if(!PyArg_ParseTuple(args, "OObiiO!O!|O!O:GOTermFinder", &pyGenes, &pyRefGenes, &slimsOnly, &evidence, &aspect,
-		&go_AnnotationType, &annotation, &go_OntologyType, &ontology, &go_OntologyType, &slimOntology, &callback)){
-		Py_INCREF(Py_None);
-		return Py_None;
+	if(!PyArg_ParseTuple(args, "OObiiO!O!|OO:GOTermFinder", &pyGenes, &pyRefGenes, &slimsOnly, &evidence, &aspect,
+		&go_AnnotationType, &annotation, &go_OntologyType, &ontology,  &slimOntology, &callback)){
+		return NULL;
 	}
 	if(!PyList_Check(pyGenes) || !PyList_Check(pyRefGenes)){
 		RAISE_TYPE_ERROR("Need a list");
-		Py_INCREF(Py_None);
-		return Py_None;
+		return NULL;
 	}
 	if(callback==Py_None || !PyCallable_Check(callback))
 		callback=NULL;
@@ -843,7 +846,7 @@ PyObject* GOTermFinder(PyObject *self, PyObject* args){
 			numMapped++;
 			ptr=ptr->next;
 		}
-		pValue=p_value(numRefGenes, term->numRef, numGenes, numMapped);
+		pValue=p_value(numGenes, annotation->numGenes, numMapped);
 		PyDict_SetItemString(result, term->goID, Py_BuildValue("Odi", geneList, pValue, term->numRef));
 		Py_DECREF(geneList);
 		node=node->next;
@@ -858,10 +861,12 @@ PyObject* GOTermFinder(PyObject *self, PyObject* args){
 
 PyObject* findGOTerms(PyObject* self, PyObject* args){
 	PyObject* pyGenes=NULL;
+	PyObject* callback=NULL;
 	Annotation* annotation=NULL;
 	Ontology* ontology=NULL;
 	Ontology* slimOntology=NULL;
 	int evidence=0;
+	int aspect=0;
 	char slimsOnly=0;
 	char directAnnotation=0;
 	char reportEvidences=0;
@@ -869,19 +874,19 @@ PyObject* findGOTerms(PyObject* self, PyObject* args){
 	TermList* list;
 	TermNode* node;
 	PyObject* result=NULL;
-	if(!PyArg_ParseTuple(args, "ObbibO!O!|O!:findTerms", &pyGenes, &slimsOnly, &directAnnotation, &evidence, &reportEvidences,
-		&go_AnnotationType, &annotation, &go_OntologyType, &ontology, &go_OntologyType, &slimOntology)){
-		Py_INCREF(Py_None);
-		return Py_None;
-	}
+	if(!PyArg_ParseTuple(args, "ObbiibO!O!|OO:findTerms", &pyGenes, &slimsOnly, &directAnnotation, &aspect, &evidence, &reportEvidences,
+		&go_AnnotationType, &annotation, &go_OntologyType, &ontology,  &slimOntology, &callback))
+		return NULL;
+	
 	if(!PyList_Check(pyGenes)){
 		RAISE_TYPE_ERROR("Need a list");
-		Py_INCREF(Py_None);
-		return Py_None;
+		return NULL;
 	}
+	if(callback==Py_None || !PyCallable_Check(callback))
+		callback=NULL;
 	genes=mapStrings(pyGenes);
 	prepareGOTerms(ontology);
-	list=findTerms(genes, evidence, 7, slimsOnly, (char)!directAnnotation, annotation, ontology, slimOntology, NULL, 0, 0);
+	list=findTerms(genes, evidence, aspect, slimsOnly, (char)!directAnnotation, annotation, ontology, slimOntology, callback, MAX(PyList_Size(pyGenes)/100,1),0);
 	node=list->head;
 	result=PyDict_New();
 	while(node){
@@ -927,13 +932,11 @@ PyObject* findGenes(PyObject* self, PyObject* args){
 
 	if(!PyArg_ParseTuple(args, "OibbO!O!|O:findGenes", &pyTerms, &evidence, &reportEvidence, &directAnnotation,
 		&go_AnnotationType, &annotation, &go_OntologyType, &ontology, &callback)){
-		Py_INCREF(Py_None);
-		return Py_None;
+		return NULL;
 	}
 	if(!PyList_Check(pyTerms)){
 		RAISE_TYPE_ERROR("Need a list");
-		Py_INCREF(Py_None);
-		return Py_None;
+		return NULL;
 	}
 	if(callback==Py_None || !PyCallable_Check(callback))
 		callback=NULL;
@@ -1039,8 +1042,7 @@ PyObject* findGenes2(PyObject* self, PyObject* args){
 	TermList *allTerms=makeTermList();
 	if(!PyArg_ParseTuple(args, "OibbO!O!|O:findGenes", &pyTerms, &evidence, &reportEvidence, &directAnnotation,
 		&go_AnnotationType, &annotation, &go_OntologyType, &ontology, &callback)){
-		Py_INCREF(Py_None);
-		return Py_None;
+		return NULL;
 	}
 	if(callback==Py_None || !PyCallable_Check(callback))
 		callback=NULL;
@@ -1149,14 +1151,12 @@ PyObject* mapToSlims(PyObject* self, PyObject* arg){
 	TermNode* node=NULL;
 	PyObject* result=PyList_New(0);
 	if(!PyArg_ParseTuple(arg, "sO!O!:mapToSlims", &goId, &go_OntologyType, &ontology, &go_OntologyType, &slimOntology)){
-		Py_INCREF(Py_None);
-		return Py_None;
+		return NULL;
 	}
 	prepareGOTerms(ontology);
 	memset(&list, 0, sizeof(TermList));
 	if((term=getGOTerm(ontology, goId))==HASH_MISS){
-		Py_INCREF(Py_None);
-		return Py_None;
+		return NULL;
 	}
 	//printf("mapping slim: %s\n", goId);
 	slimMapping(term, ontology, slimOntology, &list);

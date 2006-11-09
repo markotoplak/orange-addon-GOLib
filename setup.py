@@ -7,5 +7,8 @@ setup(name="GOLib",
       description="A library for handling gene ontologies",
       author="Ales Erjavec",
       author_email="ales.erjavec@fri.uni-lj.si",
-      ext_modules=[module], py_modules=["go"]
+      ext_modules=[module],
+      py_modules=["go"],
+      packages=["data"],
+      extra_path="GOLib"
       )

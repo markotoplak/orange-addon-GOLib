@@ -3,8 +3,13 @@ import re
 from sets import Set
 from urllib import urlretrieve
 import cPickle
+import os
 
-data_dir=".//data"
+prefix=os.path.split(__file__)[0]
+if prefix:
+    data_dir=prefix+"\\data"
+else:
+    data_dir=".//data"
 
 #Currently loaded ontology (GeneOntologyDB)
 loadedGO=None
@@ -139,6 +144,10 @@ def mapGeneName(GeneName):
     """Maps the GeneName to name if GeneName a known alias for name (GeneName can map to it self), if GeneName unknown return None""" 
     return loadedAnnotation.aliasMapper.get(GeneName, None)
 
+def mapGeneNames(names=[]):
+    return filter(lambda a:a, map(mapGeneName, names))
+    
+
 def GOTermFinder(clusterGeneList, referenceGenes=None, evidenceCodes=None, slimsOnly=False, aspect="P", progressCallback=None):
     """The method accepts a list of cluster genes, optionally a list of reference genes (otherwise all annotated genes appearing in the loaded annotation file are used),
     and optionally a list of annotation evidence codes to use, otherwise all evidence codes are used. The slimsOnly argument indicates if only GO slims are to be used,
@@ -149,13 +158,16 @@ def GOTermFinder(clusterGeneList, referenceGenes=None, evidenceCodes=None, slims
         referenceGenes=loadedAnnotation.geneNames
     if slimsOnly and not loadedSlimGO:
         setSlims()
+    #clusterGeneList=mapGeneNames(clusterGeneList)
+    #referenceGenes=mapGeneNames(referenceGenes)
+        
     annotation=loadedAnnotation.annotation
     goslim=loadedSlimGO and loadedSlimGO.ontology
     evidence=__evidenceToInt(evidenceCodes)
     aspect=namespaceDict[aspect]
     return _GOLib.GOTermFinder(clusterGeneList, referenceGenes, slimsOnly, evidence, aspect, annotation, loadedGO.ontology, goslim, progressCallback)
 
-def findTerms(geneList, slimsOnly=False, directAnnotationOnly=False, evidenceCodes=None, reportEvidence=True):
+def findTerms(geneList, slimsOnly=False, aspect=["F","C","P"], directAnnotationOnly=False, evidenceCodes=None, reportEvidence=True, progressCallback=None):
     """For each gene in geneList search for matching GO terms. Argument slimsOnly restricts the GO terms to the slim set. The method returns a dictionary where key is a
     matching GO term and items are (gene, evidence) if reportEvidence == True [gene only, if reportEvidence=False] that map to the term. Climb the GO if directAnnotationOnly=False,
     otherwise report direct annotation only.
@@ -163,10 +175,13 @@ def findTerms(geneList, slimsOnly=False, directAnnotationOnly=False, evidenceCod
     evidence=__evidenceToInt(evidenceCodes)
     if slimsOnly and not loadedSlimGO:
         setSlims()
-        
+    aa=0
+    for a in aspect:
+        aa|=namespaceDict[a]
+    #geneList=mapGeneNames(geneList)
     goslim=loadedSlimGO and loadedSlimGO.ontology
     annotation=loadedAnnotation.annotation
-    result=_GOLib.findTerms(geneList, slimsOnly, directAnnotationOnly, evidence, reportEvidence, annotation, loadedGO.ontology, goslim)
+    result=_GOLib.findTerms(geneList, slimsOnly, directAnnotationOnly, aa, evidence, reportEvidence, annotation, loadedGO.ontology, goslim, progressCallback)
         
     if reportEvidence:
         result=dict([(key, [(gene, __evidenceToList(evidence)) for gene ,evidence in val]) for key, val in result.items()])
@@ -226,12 +241,11 @@ def getSlims():
 def downloadGO():
     """Downloads the curent gene ontology from http://www.geneontology.org/ontology/gene_ontology.obo"""
     urlretrieve("http://www.geneontology.org/ontology/gene_ontology.obo", data_dir+"//gene_ontology.obo")
-    #file=open(data_dir+"//gene_ontology.obo")
-    #lines=file.read()
-    #file.close()
-    #c=re.compile("\[Term\].*?\n\n",re.DOTALL)
-    #match=c.findall(lines)
-    #go=parseGeneOntology(match)
+    file=open(data_dir+"//gene_ontology.obo")
+    data=file.read()
+    c=re.compile("\[Term\].*?\n\n",re.DOTALL)
+    match=c.findall(data)
+    go=parseGeneOntology(match)
     #cPickle.dump(go, open(data_dir+"gene_ontology.obo.PyOntologyDB", "w"))
 
 def downloadAnnotation(organizm="sgd"):
@@ -243,9 +257,8 @@ def downloadAnnotation(organizm="sgd"):
     data=gfile.readlines()
     file=open(data_dir+"//gene_association."+organizm,"w")
     file.writelines(data)
-    file.close()
     #__splitAnnotation(data, organizm)
-    #anno=parseAnnotation(data)
+    anno=parseAnnotation(data)
     #import cPickle
     #cPickle.dump(anno, open(data_dir+"//gene_association."+organizm+".PyAnnotationDB", "w"))
 
@@ -258,7 +271,6 @@ def listOrganizms():
         print "Failed to connect to http://www.geneontology.org/GO.current.annotations.shtml. Trying to find a local copy"
     file=open(data_dir+"//annotations.shtml")
     data=file.read()
-    file.close()
     match=re.findall(r'http://www\.geneontology\.org/cgi-bin/downloadGOGA\.pl/gene_association\..+?gz', data)
 
     organizms=[]
@@ -296,7 +308,6 @@ def loadOntologyFrom(filename):
     else:
         file=open(filename)
         data=file.read()
-        file.close()
         c=re.compile("\[Term\].*?\n\n",re.DOTALL)
         match=c.findall(data)
         db=parseGeneOntology(match)
@@ -345,7 +356,6 @@ def loadAnnotationFrom(filename):
         file=open(filename)
         data=file.readlines()
         anno=parseAnnotation(data)
-        file.close()
         
     anno.annotation=_GOLib.parseAnnotation([a.toTuple() for a in anno.annotationList if "NOT" not in a.Qualifier], anno.aliasMapper)
     #anno.annotation.aliasMapper=anno.aliasMapper
