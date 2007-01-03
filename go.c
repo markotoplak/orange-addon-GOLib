@@ -771,23 +771,35 @@ void freeMappedStrings(char** ptr){
 	free(tmp);
 }	
 
-double logbinomial(int n, int r){
-	double sum=0;
+double* log_sum_lookup(int size){
+	double* data=(double*) malloc(sizeof(double)*(size+1));
+	int i=0;
+	data[0]=0;
+	data[1]=0;
+	for(i=2;i<=size;i++)
+		data[i]=data[i-1]+log(i);
+	return data;
+}
+
+double logbinomial(int n, int r, double* lookup){
+	return lookup[n]-lookup[n-r]-lookup[r];
+
+/*	double sum=0;
 	int i=0;
 	//int t=(n-r+1>2)? n-r+1 : 2;
 	for(i=n;i>=n-r+1;--i)
 		sum+=log(i);
 	for(i=2;i<=r;++i)
 		sum-=log(i);
-	return sum;
+	return sum;*/
 }
 		
-double p_value(int nClusterGenes, int nGenes, int nGenesMapped){
+double p_value(int nClusterGenes, int nGenes, int nGenesMapped, int numRefGenesMapped, double* lookup){
 	double sum=0;
-	double p=(double)nGenesMapped/(double)nGenes;
+	double p=(double)numRefGenesMapped/(double)nGenes;
 	int i=0;
 	for(i=nGenesMapped;i<nClusterGenes;i++)
-		sum+=exp(logbinomial(nGenes, i)+i*log(p)+(nGenes-i)*log(1-p));
+		sum+=exp(logbinomial(nClusterGenes, i, lookup)+i*log(p)+(nClusterGenes-i)*log(1-p));
 	return sum;
 }
 
@@ -803,6 +815,7 @@ PyObject* GOTermFinder(PyObject *self, PyObject* args){
 	int numGenes;
 	int numRefGenes=0;
 	int progressStep=0;
+	double* loglookup=NULL;
 	char slimsOnly=0;
 	char** genes=NULL;
 	char** refGenes=NULL;
@@ -833,6 +846,7 @@ PyObject* GOTermFinder(PyObject *self, PyObject* args){
 	list=findTerms(genes, evidence, aspect, slimsOnly, 1, annotation, ontology, slimOntology, callback, MAX(numGenes/100,1), 0);
 	node=list->head;
 	result=PyDict_New();
+	loglookup=log_sum_lookup(numGenes);
 	while(node){
 		PyObject* geneList=PyList_New(0);
 		GOTerm* term=hash_get(ontology->hash, node->id);
@@ -846,7 +860,7 @@ PyObject* GOTermFinder(PyObject *self, PyObject* args){
 			numMapped++;
 			ptr=ptr->next;
 		}
-		pValue=p_value(numGenes, annotation->numGenes, numMapped);
+		pValue=p_value(numGenes, numRefGenes, numMapped, term->numRef, loglookup);
 		PyDict_SetItemString(result, term->goID, Py_BuildValue("Odi", geneList, pValue, term->numRef));
 		Py_DECREF(geneList);
 		node=node->next;

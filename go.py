@@ -53,7 +53,7 @@ def __evidenceToList(evidenceCode):
     return evidence
 
 class AnnotationDB:
-    annotation=None         #holds a C annotation structure do not touch
+    annotation=None         #holds a C annotation structure (do not touch)
     geneNames=None          #a list of all gene names in annotation
     annotationList=None     #a list of all instances of class Annotation
     aliasMapper=None        #alias mapper maps known aliases to gene names (column3 DB_Object_Symbol of annotation file)
@@ -61,7 +61,7 @@ class AnnotationDB:
     geneAnnotations=None    #a dictionary mapping gene name (DB_Object_Symbol) to a list of all instances of Annotation with this name
 
 class GeneOntologyDB:
-    ontology=None           #holds a C ontology structure do not touch
+    ontology=None           #holds a C ontology structure (do not touch)
     terms=None              #holds a list of all instances of class GOTerm
     termDict=None           #a dictionary mapping GO id's to instances of class GOTerm
     termDescriptorDict=None #a dictionary mapping GO id's and alt_id's to a tuple (id, namespace, def, alt_id)
@@ -364,7 +364,7 @@ def loadAnnotationFrom(filename):
     
 def __test():
     def call(i): print i
-    setDataDir("E://GO//data")
+    #setDataDir("E://GO//data")
     print "Loading GO"
     loadGO()
     print "Loading annotation"
