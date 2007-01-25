@@ -734,8 +734,8 @@ void mapReferenceGenes(char** geneName, int evidence, int aspect, Annotation* an
 				addReference(term, ontology, markCode);
 			}
 			ann++;
-			markCode++;
 		}
+		markCode++;
 		geneName++;
 	}
 }
@@ -781,7 +781,7 @@ double* log_sum_lookup(int size){
 	return data;
 }
 
-double logbinomial(int n, int r, double* lookup){
+double logbin(int n, int r, double* lookup){
 	return lookup[n]-lookup[n-r]-lookup[r];
 
 /*	double sum=0;
@@ -793,13 +793,29 @@ double logbinomial(int n, int r, double* lookup){
 		sum-=log(i);
 	return sum;*/
 }
+
+double binomial(int n, int r, double p, double* lookup){
+	if(p==0.0)
+		if(r==0.0)
+			return 0.0;
+		else if(r>0.0)
+			return 1.0;
+	else if(p==1.0)
+		if(n==r)
+			return 1.0;
+		else if(n>r)
+			return 0.0;
+	return exp(logbin(n, r, lookup)+r*log(p)+(n-r)*log(1-p));
+}
 		
-double p_value(int nClusterGenes, int nGenes, int nGenesMapped, int numRefGenesMapped, double* lookup){
+double p_value(int nClusterGenes, int nRefGenes, int nGenesMapped, int numRefGenesMapped, double* lookup){
 	double sum=0;
-	double p=(double)numRefGenesMapped/(double)nGenes;
+	double p=(double)numRefGenesMapped/(double)nRefGenes;
 	int i=0;
-	for(i=nGenesMapped;i<nClusterGenes;i++)
-		sum+=exp(logbinomial(nClusterGenes, i, lookup)+i*log(p)+(nClusterGenes-i)*log(1-p));
+	if(p>=1.0 || p<=0.0)
+		printf("p==%f\n",p);
+	for(i=nGenesMapped;i<=nClusterGenes;i++)
+		sum+=binomial(nClusterGenes,i,p,lookup);
 	return sum;
 }
 
@@ -860,13 +876,14 @@ PyObject* GOTermFinder(PyObject *self, PyObject* args){
 			numMapped++;
 			ptr=ptr->next;
 		}
-		pValue=p_value(numGenes, numRefGenes, numMapped, term->numRef, loglookup);
+		pValue=p_value(numGenes, numRefGenes, numMapped,  term->numRef, loglookup);
 		PyDict_SetItemString(result, term->goID, Py_BuildValue("Odi", geneList, pValue, term->numRef));
 		Py_DECREF(geneList);
 		node=node->next;
 	}
 	clearTermList(list);
 	free(list);
+	free(loglookup);
 	freeMappedStrings(genes);
 	freeMappedStrings(refGenes);
 	prepareGOTerms(ontology);
