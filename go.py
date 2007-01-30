@@ -12,7 +12,7 @@ if prefix:
     data_dir=prefix+"//data"
 else:
     data_dir=".//data"
-
+    
 #Currently loaded ontology (GeneOntologyDB)
 loadedGO=None
 
@@ -379,9 +379,18 @@ def getSlims():
     """Returns the curently loaded slim terms"""
     return loadedSlimGO.terms
 
-def downloadGO():
+class __progressCallWrapper:
+        def __init__(self,callback):
+            self.callback=callback
+        def __call__(self, bCount, bSize, fSize):
+            #print bCount, bSize, fSize
+            if fSize==-1:
+                fSize=10000000
+            self.callback(100*bCount*bSize/fSize)
+            
+def downloadGO(progressCallback=None):
     """Downloads the curent gene ontology from http://www.geneontology.org/ontology/gene_ontology.obo"""
-    urlretrieve("http://www.geneontology.org/ontology/gene_ontology.obo", data_dir+"//gene_ontology.obo")
+    urlretrieve("http://www.geneontology.org/ontology/gene_ontology.obo", data_dir+"//gene_ontology.obo", progressCallback and __progressCallWrapper(progressCallback))
     file=open(data_dir+"//gene_ontology.obo")
     data=file.read()
     c=re.compile("\[Term\].*?\n\n",re.DOTALL)
@@ -391,17 +400,9 @@ def downloadGO():
     
 def downloadAnnotation(organizm="sgd", progressCallback=None):
     """Downloads the annotation for the specified organizm (e.g. "sgd", "fb", "mgi",...)"""
-    class progressCallWrapper:
-        def __init__(self,callback):
-            self.callback=callback
-        def __call__(self, bCount, bSize, fSize):
-            #print bCount, bSize, fSize
-            if fSize==-1:
-                fSize=10000000
-            self.callback(100*bCount*bSize/fSize)
         
     urlretrieve("http://www.geneontology.org/cgi-bin/downloadGOGA.pl/gene_association."+organizm+".gz",
-                data_dir+"//gene_association."+organizm+".gz", progressCallback and progressCallWrapper(progressCallback))
+                data_dir+"//gene_association."+organizm+".gz", progressCallback and __progressCallWrapper(progressCallback))
     from gzip import GzipFile
     gfile=GzipFile(data_dir+"//gene_association."+organizm+".gz","r")
     data=gfile.readlines()
@@ -553,6 +554,18 @@ def __test():
     print "Finding genes"
     print findGenes(terms.keys()[:min(len(terms.keys()),3)], progressCallback=call)#,directAnnotationOnly=True)
     print findGenes(["GO:0005763","GO:0003735","GO:0042255","GO:0043037"], progressCallback=call)#,directAnnotationOnly=True)
+
+if not listDownloadedOrganizms():
+    print "Warning!!! No downloaded annotations found!!!"
+    print "You can download annotations using the downloadAnnotation function."
+    print "e.g. go.downloadAnnotation('sgd')"
+try:
+    open(data_dir+"//gene_ontology.obo")
+except:
+    print "Warning!!! No downloaded ontology found!!!"
+    print "You can download it using the downloadGO function."
+    print "e.g. go.downloadGO()"
+    
     
 if __name__=="__main__":
     __test()
