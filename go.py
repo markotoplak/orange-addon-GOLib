@@ -234,19 +234,19 @@ def getDataDir():
     located where the GOLib is instaled e.g. ...site-packages/GOLib/data)"""
     return data_dir
 
-def loadAnnotation(organizm="sgd", forceReload=False):
+def loadAnnotation(organizm="sgd", forceReload=False, progressCallback=None):
     """Loads the annotation for the specified organizm"""
     global loadedAnnotation
     if loadedAnnotation and loadedAnnotation.__file__.endswith(organizm) and not forceReload:
         return
-    loadedAnnotation=loadAnnotationFrom(data_dir+"//gene_association."+organizm)#+".PyAnnotationDB")
+    loadedAnnotation=loadAnnotationFrom(data_dir+"//gene_association."+organizm, progressCallback)#+".PyAnnotationDB")
 
-def loadGO(forceReload=False):
+def loadGO(forceReload=False, progressCallback=None):
     """Loads the ontology from 'data_dir//gene_ontlogy.obo' where data_dir is set using setDataDir (default: .//data)"""
     global loadedGO
     if loadedGO and not forceReload:
         return
-    loadedGO=loadOntologyFrom(data_dir+"//gene_ontology.obo")#.PyOntologyDB")
+    loadedGO=loadOntologyFrom(data_dir+"//gene_ontology.obo", progressCallback)#.PyOntologyDB")
     
 def mapTermId(TermId):
     """Maps the TermId to id if TermId a known alias for id (TermId can map to it self), if TermId unknown return None""" 
@@ -389,10 +389,19 @@ def downloadGO():
     go=parseGeneOntology(match)
     #cPickle.dump(go, open(data_dir+"gene_ontology.obo.PyOntologyDB", "w"))
     
-def downloadAnnotation(organizm="sgd"):
+def downloadAnnotation(organizm="sgd", progressCallback=None):
     """Downloads the annotation for the specified organizm (e.g. "sgd", "fb", "mgi",...)"""
+    class progressCallWrapper:
+        def __init__(self,callback):
+            self.callback=callback
+        def __call__(self, bCount, bSize, fSize):
+            #print bCount, bSize, fSize
+            if fSize==-1:
+                fSize=10000000
+            self.callback(100*bCount*bSize/fSize)
+        
     urlretrieve("http://www.geneontology.org/cgi-bin/downloadGOGA.pl/gene_association."+organizm+".gz",
-                data_dir+"//gene_association."+organizm+".gz")
+                data_dir+"//gene_association."+organizm+".gz", progressCallback and progressCallWrapper(progressCallback))
     from gzip import GzipFile
     gfile=GzipFile(data_dir+"//gene_association."+organizm+".gz","r")
     data=gfile.readlines()
@@ -430,12 +439,14 @@ def listDownloadedOrganizms():
     files=filter(lambda n: n.startswith("gene_association") and not n.endswith(".gz"), files)
     return [s[17:] for s in files]
 
-def parseGeneOntology(data):
+def parseGeneOntology(data, progressCallback=None):
     terms=[]
     termDict={}
     aliasMapper={}
     goTermDict={}
-    for term in data:
+    datalen=len(data)
+    milestones=Set(range(0,datalen,datalen/10))
+    for i, term in enumerate(data):
         t=GOTerm(term)
         termDict[t.id]=t
         terms.append(t)
@@ -446,6 +457,8 @@ def parseGeneOntology(data):
         for alt_id in alt:
             goTermDict[alt_id]=tt
         goTermDict[t.id]=tt
+        if progressCallback and i in milestones:
+            progressCallback(100.0*i/datalen)
     GO=GeneOntologyDB()
     GO.terms=terms
     GO.termDict=termDict
@@ -453,7 +466,7 @@ def parseGeneOntology(data):
     GO.termDescriptorDict=goTermDict
     return GO
 
-def loadOntologyFrom(filename):
+def loadOntologyFrom(filename,progressCallback=None):
     if filename.endswith(".PyOntologyDB"):
         db=cPickle.load(open(filename))
     else:
@@ -461,19 +474,21 @@ def loadOntologyFrom(filename):
         data=file.read()
         c=re.compile("\[Term\].*?\n\n",re.DOTALL)
         match=c.findall(data)
-        db=parseGeneOntology(match)
+        db=parseGeneOntology(match, progressCallback)
     db.__ontology=_GOLib.parseGOTerms([t.toTuple() for t in db.terms], db.aliasMapper)
     #db.__ontology.aliasMapper=db.aliasMapper
     db.__file__=filename
     return db
 
-def parseAnnotation(data):
+def parseAnnotation(data, progressCallback=None):
     aliasMapper={}
     annotationList=[]
     geneNames=Set()
     geneNamesDict={}
     geneAnnotation={}
-    for line in data:
+    datalen=len(data)
+    milestones=Set(range(0,datalen, datalen/10))
+    for i,line in enumerate(data):
         if line.startswith("!"):
             continue
         a=Annotation(line)
@@ -492,6 +507,8 @@ def parseAnnotation(data):
         else:
             geneAnnotation[a.geneName].append(a)
         annotationList.append(a)
+        if progressCallback and i in milestones:
+            progressCallback(100.0*i/datalen)
     a=AnnotationDB()
     a.annotationList=annotationList
     a.aliasMapper=aliasMapper
@@ -500,13 +517,13 @@ def parseAnnotation(data):
     a.geneAnnotations=geneAnnotation
     return a
 
-def loadAnnotationFrom(filename):
+def loadAnnotationFrom(filename, progressCallback=None):
     if filename.endswith(".PyAnnotationDB"):
         anno=cPickle.load(open(filename))
     else:
         file=open(filename)
         data=file.readlines()
-        anno=parseAnnotation(data)
+        anno=parseAnnotation(data, progressCallback)
         
     anno.__annotation=_GOLib.parseAnnotation([a.toTuple() for a in anno.annotationList if "NOT" not in a.Qualifier], anno.aliasMapper)
     #anno.__annotation.aliasMapper=anno.aliasMapper
