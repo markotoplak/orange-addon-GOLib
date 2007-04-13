@@ -258,7 +258,12 @@ def mapGeneName(GeneName):
 
 def mapGeneNames(names=[]):
     return filter(lambda a:a, map(mapGeneName, names))
-    
+
+def __filterSlimsGOId(d):
+    slims=[t.GOId for t in getSlims()]
+    slims=filter(lambda id:id in slims, d.keys())
+    return dict([(id, d[id]) for id in slims])
+
 def GOTermFinder(clusterGeneList, referenceGenes=None, evidenceCodes=None, slimsOnly=False, aspect="P", progressCallback=None):
     """The method accepts a list of cluster genes, optionally a list of reference genes (otherwise all annotated genes appearing in the loaded annotation file are used),
     and optionally a list of annotation evidence codes to use, otherwise all evidence codes are used. The slimsOnly argument indicates if only GO slims are to be used,
@@ -276,8 +281,12 @@ def GOTermFinder(clusterGeneList, referenceGenes=None, evidenceCodes=None, slims
     goslim=loadedSlimGO and loadedSlimGO.__ontology
     evidence=__evidenceToInt(evidenceCodes)
     aspect=namespaceDict[aspect]
-    return _GOLib.GOTermFinder(clusterGeneList, referenceGenes, slimsOnly, evidence, aspect, annotation, loadedGO.__ontology, goslim, progressCallback)
-
+    result=_GOLib.GOTermFinder(clusterGeneList, referenceGenes, slimsOnly, evidence, aspect, annotation, loadedGO.__ontology, goslim, progressCallback)
+    if slimsOnly:
+        return __filterSlimsGOId(result)
+    else:
+        return result
+    
 def findTerms(geneList, slimsOnly=False, aspect=["F","C","P"], directAnnotationOnly=False, evidenceCodes=None, reportEvidence=True, progressCallback=None):
     """For each gene in geneList search for matching GO terms. Argument slimsOnly restricts the GO terms to the slim set. The method returns a dictionary where key is a
     matching GO term and items are (gene, evidence) if reportEvidence == True [gene only, if reportEvidence=False] that map to the term. Climb the GO if directAnnotationOnly=False,
@@ -293,7 +302,8 @@ def findTerms(geneList, slimsOnly=False, aspect=["F","C","P"], directAnnotationO
     goslim=loadedSlimGO and loadedSlimGO.__ontology
     annotation=loadedAnnotation.__annotation
     result=_GOLib.findTerms(geneList, slimsOnly, directAnnotationOnly, aa, evidence, reportEvidence, annotation, loadedGO.__ontology, goslim, progressCallback)
-        
+    if slimsOnly:
+        result=__filterSlimsGOId(result)
     if reportEvidence:
         result=dict([(key, [(gene, __evidenceToList(evidence)) for gene ,evidence in val]) for key, val in result.items()])
     return result
