@@ -411,7 +411,9 @@ def downloadGO(progressCallback=None):
 def downloadAnnotation(organizm="sgd", progressCallback=None):
     """Downloads the annotation for the specified organizm (e.g. "sgd", "fb", "mgi",...)"""
         
-    urlretrieve("http://www.geneontology.org/cgi-bin/downloadGOGA.pl/gene_association."+organizm+".gz",
+    #urlretrieve("http://www.geneontology.org/cgi-bin/downloadGOGA.pl/gene_association."+organizm+".gz",
+    #            data_dir+"//gene_association."+organizm+".gz", progressCallback and __progressCallWrapper(progressCallback))
+    urlretrieve("http://cvsweb.geneontology.org/cgi-bin/cvsweb.cgi/go/gene-associations/gene_association."+organizm+".gz?rev=HEAD",
                 data_dir+"//gene_association."+organizm+".gz", progressCallback and __progressCallWrapper(progressCallback))
     from gzip import GzipFile
     gfile=GzipFile(data_dir+"//gene_association."+organizm+".gz","r")
@@ -436,12 +438,13 @@ def listOrganizms():
         print "Failed to connect to http://www.geneontology.org/GO.current.annotations.shtml. Trying to find a local copy"
     file=open(data_dir+"//annotations.shtml")
     data=file.read()
-    match=re.findall(r'http://www\.geneontology\.org/cgi-bin/downloadGOGA\.pl/gene_association\..+?gz', data)
-
+    #match=re.findall(r'http://www\.geneontology\.org/cgi-bin/downloadGOGA\.pl/gene_association\..+?gz', data)
+    match=re.findall(r'http://cvsweb\.geneontology\.org/cgi-bin/cvsweb\.cgi/go/gene-associations/gene_association\..+?gz\?rev=HEAD', data)
     organizms=[]
     for m in match:
+        #print m
         #names=re.findall(r'>.+?<', m)
-        organizms.append((m.split(".")[-2]))
+        organizms.append(m.split(".")[-2])
     return organizms
 
 def listDownloadedOrganizms():
