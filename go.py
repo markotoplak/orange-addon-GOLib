@@ -246,8 +246,8 @@ def loadAnnotation(organizm="sgd", forceReload=False, progressCallback=None):
     if loadedAnnotation and loadedAnnotation.__file__.endswith(organizm) and not forceReload:
         return
     loadedAnnotation=loadAnnotationFrom(data_dir+"//gene_association."+organizm, progressCallback)#+".PyAnnotationDB")
-	global geneMapper
-	geneMapper=loadedAnnotation.aliasMapper
+    global geneMapper
+    geneMapper=loadedAnnotation.aliasMapper
 
 def loadGO(forceReload=False, progressCallback=None):
     """Loads the ontology from 'data_dir//gene_ontlogy.obo' where data_dir is set using setDataDir (default: .//data)"""
@@ -255,8 +255,8 @@ def loadGO(forceReload=False, progressCallback=None):
     if loadedGO and not forceReload:
         return
     loadedGO=loadOntologyFrom(data_dir+"//gene_ontology.obo", progressCallback)#.PyOntologyDB")
-	global termMapper
-	termMapper=loadedGO.aliasMapper
+    global termMapper
+    termMapper=loadedGO.aliasMapper
     
 def mapTermId(TermId):
     """Maps the TermId to id if TermId a known alias for id (TermId can map to it self), if TermId unknown return None""" 
@@ -458,7 +458,7 @@ def listOrganizms():
     return organizms
 
 def listDownloadedOrganizms():
-	"""Returns a list with organizm names off all local downloaded annotations"""
+    """Returns a list with organizm names off all local downloaded annotations"""
     import os
     files=os.listdir(data_dir)
     files=filter(lambda n: n.startswith("gene_association") and not n.endswith(".gz"), files)

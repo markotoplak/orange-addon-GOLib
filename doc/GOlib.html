@@ -130,7 +130,12 @@ royi', 'GeneDB_Tbrucei', 'tigr_Tbrucei_chr2', 'goa_uniprot', 'tigr_Vcholerae']
 <p></b><code>geneMapper</code></b> Maps known gene aliases(DB_Object_Synonym) to DB_Object_Name</p>
 <p></b><code>termMapper</code></b> Maps known GOterm alt_id's to unique GOId</p>
 <p class="header">Example: mapping gene names from aliases to unique names that can be used in a search<a href=""></a></p>
-<XMP class="code">#Left for the exercize of the reader.
+<XMP class="code">geneNames=[ "YBR085W", ## synonim for AAC3
+			"AAD10",
+			"21S_rRNA_4" ##synonim for 21S_RRNA
+			]
+uniqueGeneNames = [go.geneMapper[name] for name in geneNames]
+print uniqueGeneNames #should print ["AAC3", "AAD10", "21S_rRNA_4"]
 </XMP>
 
 <h2>GOTerm</h2>
@@ -140,6 +145,26 @@ interferes with the python <code>def</code> statment and can be accesed like ter
 The fields that can have multiple values are stored as lists of strings otherwise the string after the field name from the
 ontology is supplied. If a field is not defined accessing it will result in an exception.
 The object also provides the folowing data memebers for quicker accsess: GOId, aspect, parents(list of GOId's of parents terms).</p>
+<p class=section>Some of the more frequently used GO tags (Again see <a href="http://geneontology.org/GO.format.obo-1_0.shtml#tags">http://geneontology.org/GO.format.obo-1_0.shtml</a> for more)</p>
+<dl class=methods>
+  <dt>id</dt>
+  <dd>The unique id of the term</dd>
+  <dt>name </dt>
+  <dd>The term name</dd>
+  <dt>alt_id</dt>
+  <dd>Defines an alternate id for this term</dd>
+  <dt>namespace</dt>
+  <dd>The namespace in which the term belongs (biological_process | cellular_component | molecular_function)</dd>
+  <dt>_def</dt>
+  <dd>The definition of the term</dd>
+  <dt>is_a</dt>
+  <dd>This tag describes a subclassing relationship between one term and another</dd>
+</dl>
+<p class="header">Example: printing some details of a GOTerms with keywords "catabolic" and "process" in their names<a href=""></a></p>
+<XMP class="code">selectedTerms=filter(lambda term: "catabolic" in term.name and "process" in term.name, go.loadedGO.terms)
+for term in selectedTerms:
+	print term.id, term.name, term._def
+</XMP>
 
 <h2>Annnotation</h2>
 <p>Holds the data for an annotation record read from the annotation file. Fields can be
@@ -204,6 +229,14 @@ number of reference genes that map to each significant GO term). The progressCal
   <dd>A string that determines to whitch top level term should the returned terms belong. Can be any of the folowing
     "biological_process" or shorter "P" ,"cellular_component" or "C", "molecular_function" or "F"</dd>
 </dl>
+<p class="header">Example: Finding relevant GOTerms and printing them in ascending order<a href=""></a></p>
+<XMP class="code">def call(i): print i
+res=go.GOTermFinder(uniqueGeneNames, progressCallback=call)
+res=res.items()
+res.sort(lambda (_1,(_2,a,_3)), (_4,(_5,b,_6)): cmp(a,b))
+for GOId,(genes, p, n) in res:
+	print GOId, p, genes
+</XMP>
 
 <p><b><code>findTerms(geneList, slimsOnly=False, aspect=["F","C","P"], directAnnotationOnly=False, evidenceCodes=None, reportEvidence=True, progressCallback=None)</code></b></p>
 <p>For each gene in geneList search for matching GO terms. Argument slimsOnly restricts the GO terms to the slim set. The method returns a dictionary where key is a
