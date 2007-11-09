@@ -87,8 +87,13 @@ royi', 'GeneDB_Tbrucei', 'tigr_Tbrucei_chr2', 'goa_uniprot', 'tigr_Vcholerae']
 </XMP>
 
 <h2>Acssessing the loaded data</h2>
-<p>The loaded data can be accessed by three fields in the go module, i.e. the loadedGO, loadedSlimGO whitch are of type GeneOntologyDB
-and loadedAnnotation of type AnnotationDB.</p>
+<p>The loaded data can be accessed by three fields in the go module:
+<ul>
+	<li>the loadedGO and </li>
+	<li>loadedSlimGO whitch are of type GeneOntologyDB</li>
+	<li>loadedAnnotation of type AnnotationDB</li>
+</ul>
+</p>
 
 <h2>GeneOntologyDB</h2>
 <p>An object holding the ontology database.</p>
@@ -104,12 +109,7 @@ and loadedAnnotation of type AnnotationDB.</p>
   <dd>A dictionary mapping alt_id's and id's to id's</dd>
 </dl>
 
-<XMP class=code>
-
-</XMP>
-
 <h2>AnnotationDB</h2>
-
 <p>An object holding the annotation database.</p>
 <p class=section>Members</p>
 <dl class=members>
@@ -124,6 +124,15 @@ and loadedAnnotation of type AnnotationDB.</p>
   <dt>geneAnnotations</dt>
   <dd>A dictionary mapping gene name (DB_Object_Symbol) to a list of all instances of Annotation with this name</dd>
 </dl>
+
+<h2>Mapping aliases to unique names</h2>
+<p>There are two dictionaries in the module's namespace for mapping known gene aliases and alternative GOId's to their respected unique identifiers.</p>
+<p></b><code>geneMapper</code></b> Maps known gene aliases(DB_Object_Synonym) to DB_Object_Name</p>
+<p></b><code>termMapper</code></b> Maps known GOterm alt_id's to unique GOId</p>
+<p class="header">Example: mapping gene names from aliases to unique names that can be used in a search<a href=""></a></p>
+<XMP class="code">#Left for the exercize of the reader.
+</XMP>
+
 <h2>GOTerm</h2>
 <p>Holds the data for one term read from the ontology file. All fields from the ontology can be accsessed by their
 original name (e.g. the is_a field in the ontology can be accsessed like term.is_a - for more see <a href="http://geneontology.org/GO.format.obo-1_0.shtml">http://geneontology.org/GO.format.obo-1_0.shtml</a>), except for the def field that

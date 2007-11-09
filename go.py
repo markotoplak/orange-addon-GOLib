@@ -22,6 +22,12 @@ loadedSlimGO=None
 #Currently loaded annotation (AnnotationDB)
 loadedAnnotation=None
 
+#A dictionary for mapping gene aliases
+geneMapper={}
+
+#A dictionary for mapping GOIs's
+termMapper={}
+
 namespaceDict={
     "biological_process":1, "P":1,
     "cellular_component":2, "C":2,
@@ -137,7 +143,7 @@ class GOTerm:
     original name (e.g. the is_a field in the ontology can be accsessed like term.is_a), except for the def field that
     interferes with the python def statment and can be accesed like term._def or term.__dict__['def'].
     The fields that can have multiple values are stored as lists of strings otherwise the string after the field name from the
-    ontology is supplied. If a field is not defined asscessing it will result in an exception.
+    ontology is supplied. If a field is not defined accessing it will result in an exception.
     The object also provides the folowing data memebers for quicker accsess: GOId, aspect, parents(list of GOId's of parents terms)."""
     def __init__(self, term):
         self.original={}
@@ -240,6 +246,8 @@ def loadAnnotation(organizm="sgd", forceReload=False, progressCallback=None):
     if loadedAnnotation and loadedAnnotation.__file__.endswith(organizm) and not forceReload:
         return
     loadedAnnotation=loadAnnotationFrom(data_dir+"//gene_association."+organizm, progressCallback)#+".PyAnnotationDB")
+	global geneMapper
+	geneMapper=loadedAnnotation.aliasMapper
 
 def loadGO(forceReload=False, progressCallback=None):
     """Loads the ontology from 'data_dir//gene_ontlogy.obo' where data_dir is set using setDataDir (default: .//data)"""
@@ -247,6 +255,8 @@ def loadGO(forceReload=False, progressCallback=None):
     if loadedGO and not forceReload:
         return
     loadedGO=loadOntologyFrom(data_dir+"//gene_ontology.obo", progressCallback)#.PyOntologyDB")
+	global termMapper
+	termMapper=loadedGO.aliasMapper
     
 def mapTermId(TermId):
     """Maps the TermId to id if TermId a known alias for id (TermId can map to it self), if TermId unknown return None""" 
@@ -332,18 +342,18 @@ def extractGODAG(GOTerms=[]):
     return terms      
 
 def __DAGDepth(term, cache={}):
-        if term.parents:
-            d=[]
-            for t in term.parents:
-                if t in cache:
-                    d.append(cache[t]+1)
-                else:
-                    d.append(__DAGDepth(loadedGO.termDict[t], cache)+1)
-            depth=min(d)
-            cache[term.id]=depth
-            return depth
-        else:
-            return 1
+	if term.parents:
+		d=[]
+		for t in term.parents:
+			if t in cache:
+				d.append(cache[t]+1)
+			else:
+				d.append(__DAGDepth(loadedGO.termDict[t], cache)+1)
+		depth=min(d)
+		cache[term.id]=depth
+		return depth
+	else:
+		return 1
 
 def DAGDepth(DAGTerms=[]):
     """returns the maximum depth of terms in DAGTerms"""
@@ -448,6 +458,7 @@ def listOrganizms():
     return organizms
 
 def listDownloadedOrganizms():
+	"""Returns a list with organizm names off all local downloaded annotations"""
     import os
     files=os.listdir(data_dir)
     files=filter(lambda n: n.startswith("gene_association") and not n.endswith(".gz"), files)
@@ -544,6 +555,14 @@ def loadAnnotationFrom(filename, progressCallback=None):
     anno.__file__=filename
     return anno
     
+def __getattr__(self, name):
+	if name=="geneMapper":
+		return loadedAnnotation.aliasMapper
+	elif name=="termMapper":
+		return loadedGO.aliasMapper
+	else:
+		raise ValueError(name)
+
 def __test():
     def call(i): print i
     setDataDir("E://orangecvs//GOLib//data")
