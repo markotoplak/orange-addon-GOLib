@@ -34,12 +34,12 @@ located where the GOLib is instaled e.g. ...site-packages/GOLib/data)</p>
 <a href="http://www.geneontology.org/ontology/gene_ontology.obo">http://www.geneontology.org/ontology/gene_ontology.obo</a> and saves on a local drive (You can specifie where with the <code>setDataDir</code> function</p>
 <br>
 
-<p><b><code>loadAnnotation(organizm="sgd", forceReload=False, progressCallback=None)</code></b></p>
-<p>Loads the annotation for the specified organizm</p>
+<p><b><code>loadAnnotation(organism="sgd", forceReload=False, progressCallback=None)</code></b></p>
+<p>Loads the annotation for the specified organism</p>
 <p class=section>Arguments</p>
 <dl class=arguments>
-  <dt>organizm</dt>
-  <dd>Abbreviation of the organizm you want to download (you can get the list of all available organizms with <code>listOrganizms()</code> call).</dd>
+  <dt>organism</dt>
+  <dd>Abbreviation of the organism you want to download (you can get the list of all available organisms with <code>listorganisms()</code> call).</dd>
   <dt>forceReload</dt>
   <dd>If True it will reload the database even if it is already loaded.</dd>
 </dl>
@@ -54,27 +54,27 @@ located where the GOLib is instaled e.g. ...site-packages/GOLib/data)</p>
 </dl>
 <br>
 
-<p><b><code>downloadAnnotation(organizm="sgd")</code></b></p>
-<p>Downloads the annotation for the specified organizm (e.g. "sgd", "fb", "mgi",...)</p>
+<p><b><code>downloadAnnotation(organism="sgd")</code></b></p>
+<p>Downloads the annotation for the specified organism (e.g. "sgd", "fb", "mgi",...)</p>
 <p class=section>Arguments</p>
 <dl class=arguments>
-  <dt>organizm</dt>
-  <dd>Abbreviation of the organizm you want to download (you can get the list of all available organizms with <code>listOrganizms()</code> call).</dd>
+  <dt>organism</dt>
+  <dd>Abbreviation of the organism you want to download (you can get the list of all available organisms with <code>listorganisms()</code> call).</dd>
 </dl>
 <br>
 
-<p><b><code>listOrganizms()</code></b></p>
+<p><b><code>listorganisms()</code></b></p>
 <p>Connect to <a href="http://www.geneontology.org/GO.current.annotations.shtml">http://www.geneontology.org/GO.current.annotations.shtml</a>, parse out the organism names
-appearing in the table, and return the list of organizms.</p>
+appearing in the table, and return the list of organisms.</p>
 <br>
 
-<p><b><code>listDownloadedOrganizms()</code></b></p>
-<p>Returns a list with organizm names off all local downloaded annotations</p>
+<p><b><code>listDownloadedorganisms()</code></b></p>
+<p>Returns a list with organism names off all local downloaded annotations</p>
 <XMP class=code>>>> import go
 >>> go.downloadGO()
->>> go.listDownloadedOrganizms()
+>>> go.listDownloadedorganisms()
 ['ddb', 'sgd']
->>> go.listOrganizms()
+>>> go.listorganisms()
 ['tigr_Aphagocytophilum', 'tair', 'tigr_Banthracis', 'goa_cow', 'tigr_Chydrogeno
 formans', 'wb', 'tigr_Cjejuni', 'cgd', 'tigr_Cburnetii', 'zfin', 'tigr_Dethenoge
 nes', 'ddb', 'fb', 'tigr_Echaffeensis', 'goa_chicken', 'tigr_Gsulfurreducens', '

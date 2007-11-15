@@ -240,12 +240,12 @@ def getDataDir():
     located where the GOLib is instaled e.g. ...site-packages/GOLib/data)"""
     return data_dir
 
-def loadAnnotation(organizm="sgd", forceReload=False, progressCallback=None):
-    """Loads the annotation for the specified organizm"""
+def loadAnnotation(organism="sgd", forceReload=False, progressCallback=None):
+    """Loads the annotation for the specified organism"""
     global loadedAnnotation
-    if loadedAnnotation and loadedAnnotation.__file__.endswith(organizm) and not forceReload:
+    if loadedAnnotation and loadedAnnotation.__file__.endswith(organism) and not forceReload:
         return
-    loadedAnnotation=loadAnnotationFrom(data_dir+"//gene_association."+organizm, progressCallback)#+".PyAnnotationDB")
+    loadedAnnotation=loadAnnotationFrom(data_dir+"//gene_association."+organism, progressCallback)#+".PyAnnotationDB")
     global geneMapper
     geneMapper=loadedAnnotation.aliasMapper
 
@@ -418,28 +418,28 @@ def downloadGO(progressCallback=None):
     go=parseGeneOntology(match)
     #cPickle.dump(go, open(data_dir+"gene_ontology.obo.PyOntologyDB", "w"))
     
-def downloadAnnotation(organizm="sgd", progressCallback=None):
-    """Downloads the annotation for the specified organizm (e.g. "sgd", "fb", "mgi",...)"""
+def downloadAnnotation(organism="sgd", progressCallback=None):
+    """Downloads the annotation for the specified organism (e.g. "sgd", "fb", "mgi",...)"""
         
-    #urlretrieve("http://www.geneontology.org/cgi-bin/downloadGOGA.pl/gene_association."+organizm+".gz",
-    #            data_dir+"//gene_association."+organizm+".gz", progressCallback and __progressCallWrapper(progressCallback))
-    urlretrieve("http://cvsweb.geneontology.org/cgi-bin/cvsweb.cgi/go/gene-associations/gene_association."+organizm+".gz?rev=HEAD",
-                data_dir+"//gene_association."+organizm+".gz", progressCallback and __progressCallWrapper(progressCallback))
+    #urlretrieve("http://www.geneontology.org/cgi-bin/downloadGOGA.pl/gene_association."+organism+".gz",
+    #            data_dir+"//gene_association."+organism+".gz", progressCallback and __progressCallWrapper(progressCallback))
+    urlretrieve("http://cvsweb.geneontology.org/cgi-bin/cvsweb.cgi/go/gene-associations/gene_association."+organism+".gz?rev=HEAD",
+                data_dir+"//gene_association."+organism+".gz", progressCallback and __progressCallWrapper(progressCallback))
     from gzip import GzipFile
-    gfile=GzipFile(data_dir+"//gene_association."+organizm+".gz","r")
+    gfile=GzipFile(data_dir+"//gene_association."+organism+".gz","r")
     data=gfile.readlines()
-    file=open(data_dir+"//gene_association."+organizm,"w")
+    file=open(data_dir+"//gene_association."+organism,"w")
     file.writelines(data)
-    #__splitAnnotation(data, organizm)
+    #__splitAnnotation(data, organism)
     anno=parseAnnotation(data)
     import cPickle
-    cPickle.dump(anno.aliasMapper.keys(), open(data_dir+"//gene_names."+organizm, "w"))
+    cPickle.dump(anno.aliasMapper.keys(), open(data_dir+"//gene_names."+organism, "w"))
 
-def getCachedGeneNames(organizm="sgd"):
+def getCachedGeneNames(organism="sgd"):
     import cPickle
-    return cPickle.load(open(data_dir+"//gene_names."+organizm))
+    return cPickle.load(open(data_dir+"//gene_names."+organism))
 
-def listOrganizms():
+def listOrganisms():
     """Connect to http://www.geneontology.org/GO.current.annotations.shtml, parse out the organism names
     appearing in the table, and return the list of organisms."""
     try:
@@ -450,15 +450,15 @@ def listOrganizms():
     data=file.read()
     #match=re.findall(r'http://www\.geneontology\.org/cgi-bin/downloadGOGA\.pl/gene_association\..+?gz', data)
     match=re.findall(r'http://cvsweb\.geneontology\.org/cgi-bin/cvsweb\.cgi/go/gene-associations/gene_association\..+?gz\?rev=HEAD', data)
-    organizms=[]
+    organisms=[]
     for m in match:
         #print m
         #names=re.findall(r'>.+?<', m)
-        organizms.append(m.split(".")[-2])
-    return organizms
+        organisms.append(m.split(".")[-2])
+    return organisms
 
-def listDownloadedOrganizms():
-    """Returns a list with organizm names off all local downloaded annotations"""
+def listDownloadedOrganisms():
+    """Returns a list with organism names off all local downloaded annotations"""
     import os
     files=os.listdir(data_dir)
     files=filter(lambda n: n.startswith("gene_association") and not n.endswith(".gz"), files)
@@ -587,7 +587,7 @@ def __test():
     print findGenes(terms.keys()[:min(len(terms.keys()),3)], progressCallback=call)#,directAnnotationOnly=True)
     print findGenes(["GO:0005763","GO:0003735","GO:0042255","GO:0043037"], progressCallback=call)#,directAnnotationOnly=True)
 
-if not listDownloadedOrganizms():
+if not listDownloadedOrganisms():
     print "Warning!!! No downloaded annotations found!!!"
     print "You can download annotations using the downloadAnnotation function."
     print "e.g. go.downloadAnnotation('sgd')"
