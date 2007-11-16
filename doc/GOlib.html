@@ -4,18 +4,22 @@
 </HEAD> <body>
 
 <h1>GOLib - A library for handling gene ontologies</h1>
-
+<index name="GOLib">
 <p>GOLib is an open source python library for handling of gene ontology (GO) databases released under the GPL licence
-<a href="http://www.geneontology.org/GO.doc.shtml"> (More about GO).</a> It is designed for fast searching... 
+<a href="http://www.geneontology.org/GO.doc.shtml"> (More about GO).</a> It is designed for fast searching and ease of use by using the power of python's expresive powers 
+combined with the speed of a C implemented search algorithm.
 </p>
 
 <p>Some of the basic uses that GOLib is sutible for:
-<ul><li>..</li>
+<ul>
+  <li>GO term manipulation in python</li>
+  <li>Searcing the GO for relevant terms</li>
+  <li>...</li>
 </ul>
 
 <h2>Downloading and loading the database</h2>
-
 <p><b><code>setDataDir(dataDir)</code></b></p>
+<index name ="setDataDir">
 <p>Set the data directory where the annotation and ontology files are stored (by default a directory named data
 located where the GOLib is instaled e.g. ...site-packages/GOLib/data)</p>
 <p class=section>Arguments</p>
@@ -26,15 +30,18 @@ located where the GOLib is instaled e.g. ...site-packages/GOLib/data)</p>
 <br>
 
 <p><b><code>getDataDir()</code></b></p>
+<index name="getDataDir">
 <p>Get the data directory where the annotation and ontology files are stored (by default a directory named data 
 located where the GOLib is instaled e.g. ...site-packages/GOLib/data)</p>
 
 <p><b><code>downloadGO()</code></b></p>
+<index name = "downloadGO">
 <p>Downloads the curent gene ontology from 
 <a href="http://www.geneontology.org/ontology/gene_ontology.obo">http://www.geneontology.org/ontology/gene_ontology.obo</a> and saves on a local drive (You can specifie where with the <code>setDataDir</code> function</p>
 <br>
 
 <p><b><code>loadAnnotation(organism="sgd", forceReload=False, progressCallback=None)</code></b></p>
+<index name="loadAnnotation">
 <p>Loads the annotation for the specified organism</p>
 <p class=section>Arguments</p>
 <dl class=arguments>
@@ -46,6 +53,7 @@ located where the GOLib is instaled e.g. ...site-packages/GOLib/data)</p>
 <br>
 
 <p><b><code>loadGO(forceReload=False, progressCallback=None)</code></b></p>
+<index name="loadGO">
 <p>Loads the ontology from 'data_dir//gene_ontlogy.obo' where data_dir is set using setDataDir (default: .//data)</p>
 <p class=section>Arguments</p>
 <dl class=arguments>
@@ -55,6 +63,7 @@ located where the GOLib is instaled e.g. ...site-packages/GOLib/data)</p>
 <br>
 
 <p><b><code>downloadAnnotation(organism="sgd")</code></b></p>
+<index name = "downloadAnnotation">
 <p>Downloads the annotation for the specified organism (e.g. "sgd", "fb", "mgi",...)</p>
 <p class=section>Arguments</p>
 <dl class=arguments>
@@ -63,12 +72,14 @@ located where the GOLib is instaled e.g. ...site-packages/GOLib/data)</p>
 </dl>
 <br>
 
-<p><b><code>listorganisms()</code></b></p>
+<p><b><code>listOrganisms()</code></b></p>
+<index neme = "listOrganisms">
 <p>Connect to <a href="http://www.geneontology.org/GO.current.annotations.shtml">http://www.geneontology.org/GO.current.annotations.shtml</a>, parse out the organism names
 appearing in the table, and return the list of organisms.</p>
 <br>
 
-<p><b><code>listDownloadedorganisms()</code></b></p>
+<p><b><code><index>listDownloadedOrganisms()</index></code></b></p>
+<index name ="listDownloadedOrganisms">
 <p>Returns a list with organism names off all local downloaded annotations</p>
 <XMP class=code>>>> import go
 >>> go.downloadGO()
@@ -89,14 +100,15 @@ royi', 'GeneDB_Tbrucei', 'tigr_Tbrucei_chr2', 'goa_uniprot', 'tigr_Vcholerae']
 <h2>Acssessing the loaded data</h2>
 <p>The loaded data can be accessed by three fields in the go module:
 <ul>
-	<li>the loadedGO and </li>
-	<li>loadedSlimGO whitch are of type GeneOntologyDB</li>
-	<li>loadedAnnotation of type AnnotationDB</li>
+	<li>the <index>loadedGO</index> and </li>
+	<li><index>loadedSlimGO</index> whitch are of type GeneOntologyDB</li>
+	<li><index>loadedAnnotation</index> of type AnnotationDB</li>
 </ul>
 </p>
 
-<h2>GeneOntologyDB</h2>
-<p>An object holding the ontology database.</p>
+<h2><index>GeneOntologyDB</index></h2>
+<index name = "classes+GeneOntologyDB">
+<p>An object holding the <index>ontology database</index>.</p>
 <p class=section>Members</p>
 <dl class=members>
   <dt>terms</dt> 
@@ -110,7 +122,8 @@ royi', 'GeneDB_Tbrucei', 'tigr_Tbrucei_chr2', 'goa_uniprot', 'tigr_Vcholerae']
 </dl>
 
 <h2>AnnotationDB</h2>
-<p>An object holding the annotation database.</p>
+<index name = "classes+AnnotationDB">
+<p>An object holding the <index>annotation database</index>.</p>
 <p class=section>Members</p>
 <dl class=members>
   <dt>geneNames</dt>
@@ -139,6 +152,7 @@ print uniqueGeneNames #should print ["AAC3", "AAD10", "21S_rRNA_4"]
 </XMP>
 
 <h2>GOTerm</h2>
+<index name = "classes+GOTerm">
 <p>Holds the data for one term read from the ontology file. All fields from the ontology can be accsessed by their
 original name (e.g. the is_a field in the ontology can be accsessed like term.is_a - for more see <a href="http://geneontology.org/GO.format.obo-1_0.shtml">http://geneontology.org/GO.format.obo-1_0.shtml</a>), except for the def field that
 interferes with the python <code>def</code> statment and can be accesed like term._def or term.__dict__['def'].
@@ -167,6 +181,7 @@ for term in selectedTerms:
 </XMP>
 
 <h2>Annnotation</h2>
+<index name = "classes/annotation">
 <p>Holds the data for an annotation record read from the annotation file. Fields can be
 accessed with the names: DB, DB_Object_ID, DB_Object_Symbol, Qualifier, GO_ID, DB_Reference,
 Evidence_code, With_or_From, Aspect, DB_Object_Name, DB_Object_Synonym, DB_Object_Type, taxon,
@@ -207,14 +222,22 @@ aspect and alias(a list of aliases)</p>
   <dd>Date on which the annotation was made; format is YYYYMMDD</dd>
   <dt>Assigned_by</dt>
   <dd>The database which made the annotation one of the values from the set of <a href="http://geneontology.org/cgi-bin/xrefs.cgi">GO database cross-references</a></dd>
+</dl>
 
 <h2>Finding relevant GO terms</h2>
 <p>The GOLib's main functionality ...</p>
 <p><b><code>GOTermFinder(clusterGeneList, referenceGenes=None, evidenceCodes=None, slimsOnly=False, aspect="P", progressCallback=None)</code></b>-> {GOId : ([geneName, ...], float, int), ...}</p>
+<index name = "GOTermFinder">
 <p>The method accepts a list of cluster genes, optionally a list of reference genes (otherwise all annotated genes appearing in the loaded annotation file are used),
 and optionally a list of annotation evidence codes to use, otherwise all evidence codes are used. The slimsOnly argument indicates if only GO slims are to be used,
-otherwise all GO terms are considered. The method returns a dictionary of significant GO terms, items are (cluster genes that map to each selected term, p-value,
-number of reference genes that map to each significant GO term). The progressCallback if present will be called with a single argument for all values in range [0..99]</p>
+otherwise all GO terms are considered. The progressCallback if present will be called with a single argument for all values in range [0..99].
+The method returns a dictionary of significant GO terms, items are tuples ([geneName, ...], p-value, nRef) where 
+<ul>
+  <li>[geneName, ...] is a list of cluster genes that map to the selected term</li>
+  <li>p-value is the probability that the mapping of the genes to this term is a complete coincidence given the reference distribution</li>
+  <li>nRef is the number of reference genes that map to the term</li>
+</ul>
+</p>
 <p class=section>Arguments</p>
 <dl class=arguments>
   <dt>clusterGeneList</dt>
@@ -239,6 +262,7 @@ for GOId,(genes, p, n) in res:
 </XMP>
 
 <p><b><code>findTerms(geneList, slimsOnly=False, aspect=["F","C","P"], directAnnotationOnly=False, evidenceCodes=None, reportEvidence=True, progressCallback=None)</code></b></p>
+<index name= "findTerms">
 <p>For each gene in geneList search for matching GO terms. Argument slimsOnly restricts the GO terms to the slim set. The method returns a dictionary where key is a
 matching GO term and items are (gene, evidence) if reportEvidence == True [gene only, if reportEvidence=False] that map to the term. Climb the GO if directAnnotationOnly=False,
 otherwise report direct annotation only.</p>
@@ -260,6 +284,7 @@ otherwise report direct annotation only.</p>
 </dl>
 
 <p><b><code>findGenes(GOTerms=[], directAnnotationOnly=False, evidenceCodes=None, reportEvidence=True, progressCallback=None)</code></b></p>
+<index name = "findGenes">
 <p>Return a dictionary where key is a matching gene and items are (GO terms) or (GO term, list of evidences) from the GOterms list.
 (Note this will take a lot of time if the directAnnotationOnly=False)</p>
 <p class=section>Arguments</p>
