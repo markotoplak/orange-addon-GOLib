@@ -332,7 +332,7 @@ def extractGODAG(GOTerms=[]):
     expanded=[]
     queue=list(GOTerms)
     while queue:
-        id=queue.pop()
+        id=queue.pop(0)
         term=loadedGO.termDict.get(id, None)
         term=term or loadedGO.termDict.get(loadedGO.aliasMapper.get(id, None), None)
         if term and (term.id not in expanded):
@@ -554,15 +554,138 @@ def loadAnnotationFrom(filename, progressCallback=None):
     #anno.__annotation.aliasMapper=anno.aliasMapper
     anno.__file__=filename
     return anno
-    
-def __getattr__(self, name):
-	if name=="geneMapper":
-		return loadedAnnotation.aliasMapper
-	elif name=="termMapper":
-		return loadedGO.aliasMapper
-	else:
-		raise ValueError(name)
 
+def filterByPValue(terms, maxPValue=0.1):
+    """Filters the terms by the p-value. Asumes terms is is a dict with the same structure as returned from GOTermFinderFunc
+    """
+    return dict(filter(lambda (k,e): e[1]<maxPValue, terms.items()))
+
+def drawEnrichmentGraph(GOTerms, filename="graph.png", width=None, height=None):
+    def getParents(term):
+        parents = extractGODAG([term])
+        parents = filter(lambda t: t.id in GOTerms and t.id!=term, parents)
+        c = []
+        map(c.extend, [getParents(t.id) for t in parents])
+        parents = filter(lambda t: t not in c, parents)
+        return parents
+    parents = dict([(term, getParents(term)) for term in GOTerms])
+    #print "Parentes", parents
+    def getChildren(term):
+        return filter(lambda t: term in [p.id for p in parents[t]], GOTerms.keys())
+    topLevelTerms = filter(lambda t: not parents[t], parents.keys())
+    #print "Top level terms", topLevelTerms
+    termsList=[]
+    def collect(term, parent):
+        termsList.append(
+            (float(len(GOTerms[term][0]))/GOTerms[term][2],
+            len(GOTerms[term][0]),
+            GOTerms[term][2],
+            "%.4f" % GOTerms[term][1],
+            loadedGO.termDict[term].name,
+            loadedGO.termDict[term].id,
+            parent)
+            )
+        parent = len(termsList)-1
+        for c in getChildren(term):
+            collect(c, parent)
+                         
+    for topTerm in topLevelTerms:
+        collect(topTerm, None)
+
+    drawEnrichmentGraphPIL(termsList, filename, width, height)        
+        
+def drawEnrichmentGraphPIL(termsList, filename, width=None, height=None):
+    from PIL import Image, ImageDraw, ImageFont
+    backgroundColor = (255, 255, 255)
+    textColor = (0, 0, 0)
+    graphColor = (0, 0, 255)
+    fontSize = height==None and 10 or (height-60)/len(termsList)
+    font = ImageFont.load_default()
+    try:
+        font = ImageFont.truetype("arial.ttf", fontSize)
+    except:
+        pass
+    getMaxTextHeightHint = lambda l: max([font.getsize(t)[1] for t in l])
+    getMaxTextWidthHint = lambda l: max([font.getsize(t)[0] for t in l])
+    maxFoldWidth = width!=None and min(150, width/6) or 150
+    foldWidths = [int(maxFoldWidth*term[0]) for term in termsList]
+    treeStep = 10
+    treeWidth = {}
+    for i, term in enumerate(termsList):
+        treeWidth[i] = (term[6]==None and 1 or treeWidth[term[6]]+1)
+    treeStep = width!=None and min(treeStep, width/(6*max(treeWidth.values())) or 2) or treeStep
+    treeWidth = [w*treeStep + foldWidths[i] for i, w in treeWidth.items()]
+    treeWidth = max(treeWidth) - maxFoldWidth
+    verticalMargin = 10
+    horizontalMargin = 10
+    print verticalMargin, maxFoldWidth, treeWidth
+    #treeWidth = 100
+    firstColumnStart = verticalMargin + maxFoldWidth + treeWidth + 10
+    secondColumnStart = firstColumnStart + getMaxTextWidthHint([str(t[1]) for t in termsList]+["List"]) + 2
+    thirdColumnStart = secondColumnStart + getMaxTextWidthHint([str(t[2]) for t in termsList]+["Total"]) + 2
+    fourthColumnStart = thirdColumnStart + getMaxTextWidthHint([str(t[3]) for t in termsList]+["p-value"]) + 4
+    maxAnnotationTextWidth = width==None and getMaxTextWidthHint([str(t[4]) for t in termsList]+["Annotation"]) or width-fourthColumnStart - verticalMargin
+    legendHeight = font.getsize("1234567890")[1]*2
+    termHeight = font.getsize("A")[1]
+    print fourthColumnStart, maxAnnotationTextWidth, verticalMargin
+    width = fourthColumnStart + maxAnnotationTextWidth + verticalMargin
+    height = len(termsList)*termHeight+2*(legendHeight+horizontalMargin)
+
+    image = Image.new("RGB", (width, height), backgroundColor)
+    draw = ImageDraw.Draw(image)
+
+    def truncText(text, append=""):
+        #print getMaxTextWidthHint([text]), maxAnnotationTextWidth
+        if getMaxTextWidthHint([text])>maxAnnotationTextWidth:
+            while getMaxTextWidthHint([text+"..."+append])>maxAnnotationTextWidth and text:
+                text = text[:-1]
+            text = text+"..."+append
+        return text
+    currentY = horizontalMargin + legendHeight
+    connectAtX = {}
+    for i, term in enumerate(termsList):
+        draw.line([(verticalMargin, currentY+termHeight/2), (verticalMargin + foldWidths[i], currentY+termHeight/2)], width=termHeight-2, fill=graphColor)
+        draw.text((firstColumnStart, currentY), str(term[1]), font=font, fill=textColor)
+        draw.text((secondColumnStart, currentY), str(term[2]), font=font, fill=textColor)
+        draw.text((thirdColumnStart, currentY), str(term[3]), font=font, fill=textColor)
+        annotText = width!=None and truncText(str(term[4]), str(term[5])) or str(term[4])
+        draw.text((fourthColumnStart, currentY), annotText, font=font, fill=textColor)
+        lineEnd = term[6]==None and firstColumnStart-10 or connectAtX[term[6]]
+        draw.line([(verticalMargin+foldWidths[i]+1, currentY+termHeight/2), (lineEnd, currentY+termHeight/2)], width=1, fill=textColor)
+        if term[6]!=None:
+            draw.line([(lineEnd, currentY+termHeight/2), (lineEnd, currentY+termHeight/2 - termHeight*(i-term[6]))], width=1, fill=textColor)
+        connectAtX[i] = lineEnd - treeStep
+        currentY+=termHeight
+
+    currentY = horizontalMargin
+    draw.text((firstColumnStart, currentY), "list", font=font, fill=textColor)
+    draw.text((secondColumnStart, currentY), "total", font=font, fill=textColor)
+    draw.text((thirdColumnStart, currentY), "p-value", font=font, fill=textColor)
+    draw.text((fourthColumnStart, currentY), "Annnotation", font=font, fill=textColor)
+
+    horizontalMargin = 0
+    draw.line([(verticalMargin, height - horizontalMargin - legendHeight), (verticalMargin + maxFoldWidth, height - horizontalMargin - legendHeight)], width=1, fill=textColor)
+    #draw.line([(verticalMargin, horizontalMargin + legendHeight), (verticalMargin + maxFoldWidth, horizontalMargin + legendHeight)], width=1, fill=textColor)
+    for i in range(11):
+        draw.line([(verticalMargin + i*maxFoldWidth/10, height - horizontalMargin - legendHeight/2), (verticalMargin + i*maxFoldWidth/10, height - horizontalMargin - legendHeight)], width=1, fill=textColor)
+        draw.text((verticalMargin + i*maxFoldWidth/10 - font.getsize(str(i))[0]/2, height - horizontalMargin - legendHeight/2), str(i), font=font, fill=textColor)
+        
+        #draw.line([(verticalMargin + i*maxFoldWidth/10, horizontalMargin + legendHeight/2), (verticalMargin + i*maxFoldWidth/10, horizontalMargin + legendHeight)], width=1, fill=textColor)
+        #draw.text((verticalMargin + i*maxFoldWidth/10 - font.getsize(str(i))[0]/2, horizontalMargin), str(i), font=font, fill=textColor)        
+        
+    image.save(filename)
+
+def __test1():
+    setDataDir("E://orangecvs//GOLib//data")
+    print "Loading GO"
+    loadGO()
+    print "Loading annotation"
+    loadAnnotation()
+    terms = GOTermFinder(loadedAnnotation.geneNames[:30], aspect="F")
+    terms = filterByPValue(terms, 0.1)
+    print terms
+    drawEnrichmentGraph(terms, filename="pict.png", width=400, height=600)
+    
 def __test():
     def call(i): print i
     setDataDir("E://orangecvs//GOLib//data")
@@ -575,7 +698,9 @@ def __test():
     print "Finding terms"
     print GOTermFinder(loadedAnnotation.geneNames[:20], progressCallback=call)
     print "Finding slim terms"
-    print GOTermFinder(loadedAnnotation.geneNames[20:30], slimsOnly=True, aspect="F")
+    terms = GOTermFinder(loadedAnnotation.geneNames[20:30], slimsOnly=True, aspect="F")
+    print terms
+    drawGOAT(terms)
     print "Finding terms"
     print findTerms(loadedAnnotation.geneNames[100:120])
     print "Finding direct slim terms"
@@ -600,6 +725,6 @@ except:
     
     
 if __name__=="__main__":
-    __test()
+    __test1()
     
     
