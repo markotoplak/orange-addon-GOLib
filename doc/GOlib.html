@@ -335,7 +335,14 @@ otherwise report direct annotation only.</p>
   <dd>Where to save the picture</dd>
   <dt>width, height</dt>
   <dd>Are optional (reasonable defaults are assumed) and serve only as a hint</dd>
- </dl>
+</dl>
+<p class="header">Example: <a href="golib.py">golib.py</a></p>
+<XMP class="code">terms=go.GOTermFinder(uniqueGeneNames)
+terms=go.filterByPValue(terms, 0.2)
+go.drawEnrichmentGraph(terms, "enrichment_graph.png", width=600)
+</XMP>
+<p>produces the folowing image</p>
+<img src="enrichment_graph.png">
 </body>
 </html>
   
