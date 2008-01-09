@@ -142,7 +142,7 @@ royi', 'GeneDB_Tbrucei', 'tigr_Tbrucei_chr2', 'goa_uniprot', 'tigr_Vcholerae']
 <p>There are two dictionaries in the module's namespace for mapping known gene aliases and alternative GOId's to their respected unique identifiers.</p>
 <p></b><code>geneMapper</code></b> Maps known gene aliases(DB_Object_Synonym) to DB_Object_Name</p>
 <p></b><code>termMapper</code></b> Maps known GOterm alt_id's to unique GOId</p>
-<p class="header">Example: mapping gene names from aliases to unique names that can be used in a search<a href=""></a></p>
+<p class="header">Example: mapping gene names from aliases to unique names that can be used in a search (from <a href="golib.py">golib.py</a>)</p>
 <XMP class="code">geneNames=[ "YBR085W", ## synonim for AAC3
 			"AAD10",
 			"21S_rRNA_4" ##synonim for 21S_RRNA
@@ -174,7 +174,7 @@ The object also provides the folowing data memebers for quicker accsess: GOId, a
   <dt>is_a</dt>
   <dd>This tag describes a subclassing relationship between one term and another</dd>
 </dl>
-<p class="header">Example: printing some details of a GOTerms with keywords "catabolic" and "process" in their names<a href=""></a></p>
+<p class="header">Example: printing some details of a GOTerms with keywords "catabolic" and "process" in their names (from <a href="golib.py">golib.py</a>)</p>
 <XMP class="code">selectedTerms=filter(lambda term: "catabolic" in term.name and "process" in term.name, go.loadedGO.terms)
 for term in selectedTerms:
 	print term.id, term.name, term._def
@@ -252,7 +252,7 @@ The method returns a dictionary of significant GO terms, items are tuples ([gene
   <dd>A string that determines to whitch top level term should the returned terms belong. Can be any of the folowing
     "biological_process" or shorter "P" ,"cellular_component" or "C", "molecular_function" or "F"</dd>
 </dl>
-<p class="header">Example: Finding relevant GOTerms and printing them in ascending order<a href=""></a></p>
+<p class="header">Example: Finding relevant GOTerms and printing them in ascending order (from <a href="golib.py">golib.py</a>)</p>
 <XMP class="code">def call(i): print i
 res=go.GOTermFinder(uniqueGeneNames, progressCallback=call)
 res=res.items()
@@ -336,7 +336,7 @@ otherwise report direct annotation only.</p>
   <dt>width, height</dt>
   <dd>Are optional (reasonable defaults are assumed) and serve only as a hint</dd>
 </dl>
-<p class="header">Example: <a href="golib.py">golib.py</a></p>
+<p class="header">Example: (from <a href="golib.py">golib.py</a>)</p>
 <XMP class="code">terms=go.GOTermFinder(uniqueGeneNames)
 terms=go.filterByPValue(terms, 0.2)
 go.drawEnrichmentGraph(terms, "enrichment_graph.png", width=600)
