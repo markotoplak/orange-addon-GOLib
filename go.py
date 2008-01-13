@@ -691,7 +691,7 @@ def drawEnrichmentGraphPIL_tostream(termsList, fh, width=None, height=None):
         draw.line([(verticalMargin + i*maxFoldWidth/10, horizontalMargin + legendHeight/2), (verticalMargin + i*maxFoldWidth/10, horizontalMargin + legendHeight)], width=1, fill=textColor)
         draw.text((verticalMargin + i*maxFoldWidth/10 - font.getsize(str(i))[0]/2, horizontalMargin), str(i), font=font, fill=textColor)        
         
-    image.save(fh, "GIF")
+    image.save(fh, "JPEG")
 
 def __test1():
     setDataDir("E://orangecvs//GOLib//data")
