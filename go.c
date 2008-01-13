@@ -812,8 +812,8 @@ double p_value(int nClusterGenes, int nRefGenes, int nGenesMapped, int numRefGen
 	double sum=0;
 	double p=(double)numRefGenesMapped/(double)nRefGenes;
 	int i=0;
-	if(p>=1.0 || p<=0.0)
-		printf("p==%f\n",p);
+//	if(p>=1.0 || p<=0.0)
+//		printf("p==%f\n",p);
 	for(i=nGenesMapped;i<=nClusterGenes;i++)
 		sum+=binomial(nClusterGenes,i,p,lookup);
 	return sum;
