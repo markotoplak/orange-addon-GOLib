@@ -560,7 +560,7 @@ def filterByPValue(terms, maxPValue=0.1):
     """
     return dict(filter(lambda (k,e): e[1]<maxPValue, terms.items()))
 
-def filterByFrequency(terms, minF=0.1):
+def filterByFrequency(terms, minF=2):
     """Filters the terms by the p-value. Asumes terms is is a dict with the same structure as returned from GOTermFinderFunc
     """
     return dict(filter(lambda (k,e): len(e[0])>=minF, terms.items()))
