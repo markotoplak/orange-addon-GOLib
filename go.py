@@ -565,7 +565,10 @@ def filterByFrequency(terms, minF=2):
     """
     return dict(filter(lambda (k,e): len(e[0])>=minF, terms.items()))
 
-def drawEnrichmentGraph(GOTerms, filename="graph.png", width=None, height=None):
+def drawEnrichmentGraph(termsList, filename="graph.png", width=None, height=None):
+	drawEnrichmentGraph_tostream(termsList, open(filename, "wb"), width, height)
+
+def drawEnrichmentGraph_tostream(GOTerms, fh, width=None, height=None):
     def getParents(term):
         parents = extractGODAG([term])
         parents = filter(lambda t: t.id in GOTerms and t.id!=term, parents)
@@ -598,9 +601,9 @@ def drawEnrichmentGraph(GOTerms, filename="graph.png", width=None, height=None):
     for topTerm in topLevelTerms:
         collect(topTerm, None)
 
-    drawEnrichmentGraphPIL(termsList, filename, width, height)        
-        
-def drawEnrichmentGraphPIL(termsList, filename, width=None, height=None):
+    drawEnrichmentGraphPIL_tostream(termsList, fh, width, height)        
+
+def drawEnrichmentGraphPIL_tostream(termsList, fh, width=None, height=None):
     from PIL import Image, ImageDraw, ImageFont
     backgroundColor = (255, 255, 255)
     textColor = (0, 0, 0)
@@ -688,7 +691,7 @@ def drawEnrichmentGraphPIL(termsList, filename, width=None, height=None):
         draw.line([(verticalMargin + i*maxFoldWidth/10, horizontalMargin + legendHeight/2), (verticalMargin + i*maxFoldWidth/10, horizontalMargin + legendHeight)], width=1, fill=textColor)
         draw.text((verticalMargin + i*maxFoldWidth/10 - font.getsize(str(i))[0]/2, horizontalMargin), str(i), font=font, fill=textColor)        
         
-    image.save(filename)
+    image.save(fh, "GIF")
 
 def __test1():
     setDataDir("E://orangecvs//GOLib//data")
