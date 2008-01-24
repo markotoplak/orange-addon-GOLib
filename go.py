@@ -34,7 +34,7 @@ namespaceDict={
     "molecular_function":4, "F":4}
 
 evidenceDict={"IMP":1, "IGI":2, "IPI":4, "ISS":8, "IDA":16, "IEP":32, "IEA":64,
-              "TAS":128, "NAS":256, "ND":512, "IC":1024, "RCA":2048}
+              "TAS":128, "NAS":256, "ND":512, "IC":1024, "RCA":2048, "IGC":4096, "RCA":8192}
 
 evidenceTypesOrdered = [
 'IMP',
@@ -44,6 +44,8 @@ evidenceTypesOrdered = [
 'IDA',
 'IEP',
 'IEA',
+'IGC',
+'RCA',
 'TAS',
 'NAS',
 'ND',
@@ -58,6 +60,8 @@ evidenceTypes = {
 'IDA': 'inferred from direct assay',
 'IEP': 'inferred from expression pattern',
 'IEA': 'inferred from electronic annotation', ## [to <database:id>]',
+'IGC': 'Inferred from Genomic Context',
+'RCA': 'inferred from Reviewed Computational Analysis',
 'TAS': 'traceable author statement',
 'NAS': 'non-traceable author statement',
 'ND': 'no biological data available ',
@@ -121,7 +125,7 @@ class AnnotationDB:
     geneNames=None          #a list of all gene names in annotation
     annotationList=None     #a list of all instances of class Annotation
     aliasMapper=None        #alias mapper maps known aliases to gene names (column3 DB_Object_Symbol of annotation file)
-    geneNamesDict=None      #a dictionary mapping any known alias to a list [DB_Object_ID, DB_Object_Symbol [,DB_Object_Synonym]] i.d. all known names
+    geneNamesDict=None      #a dictionary mapping any known alias to a list [DB_Object_ID, DB_Object_Symbol [,DB_Object_Synonym]] i.e. all known names
     geneAnnotations=None    #a dictionary mapping gene name (DB_Object_Symbol) to a list of all instances of Annotation with this name
 
 class GeneOntologyDB:
@@ -561,14 +565,19 @@ def filterByPValue(terms, maxPValue=0.1):
     return dict(filter(lambda (k,e): e[1]<maxPValue, terms.items()))
 
 def filterByFrequency(terms, minF=2):
-    """Filters the terms by the p-value. Asumes terms is is a dict with the same structure as returned from GOTermFinderFunc
+    """Filters the terms by the cluster frequency. Asumes terms is is a dict with the same structure as returned from GOTermFinderFunc
     """
     return dict(filter(lambda (k,e): len(e[0])>=minF, terms.items()))
 
-def drawEnrichmentGraph(termsList, filename="graph.png", width=None, height=None):
-	drawEnrichmentGraph_tostream(termsList, open(filename, "wb"), width, height)
+def filterByRefFrequency(terms, minF=4):
+    """Filters the terms by the reference frequency. Asumes terms is is a dict with the same structure as returned from GOTermFinderFunc
+    """
+    return dict(filter(lambda (k,e): e[2]>=minF, terms.items()))
 
-def drawEnrichmentGraph_tostream(GOTerms, fh, width=None, height=None):
+def drawEnrichmentGraph(termsList, clusterSize, refSize, filename="graph.png", width=None, height=None):
+	drawEnrichmentGraph_tostream(termsList, clusterSize, refSize, open(filename, "wb"), width, height)
+
+def drawEnrichmentGraph_tostream(GOTerms, clusterSize, refSize, fh, width=None, height=None):
     def getParents(term):
         parents = extractGODAG([term])
         parents = filter(lambda t: t.id in GOTerms and t.id!=term, parents)
@@ -585,7 +594,7 @@ def drawEnrichmentGraph_tostream(GOTerms, fh, width=None, height=None):
     termsList=[]
     def collect(term, parent):
         termsList.append(
-            (float(len(GOTerms[term][0]))/GOTerms[term][2],
+            ((float(len(GOTerms[term][0]))/clusterSize) / (float(GOTerms[term][2])/refSize),
             len(GOTerms[term][0]),
             GOTerms[term][2],
             "%.4f" % GOTerms[term][1],
@@ -594,6 +603,7 @@ def drawEnrichmentGraph_tostream(GOTerms, fh, width=None, height=None):
             ", ".join(GOTerms[term][0]),
             parent)
             )
+        print float(len(GOTerms[term][0])), float(GOTerms[term][2]), clusterSize, refSize
         parent = len(termsList)-1
         for c in getChildren(term):
             collect(c, parent)
@@ -602,13 +612,13 @@ def drawEnrichmentGraph_tostream(GOTerms, fh, width=None, height=None):
         collect(topTerm, None)
 
     drawEnrichmentGraphPIL_tostream(termsList, fh, width, height)        
-
+        
 def drawEnrichmentGraphPIL_tostream(termsList, fh, width=None, height=None):
     from PIL import Image, ImageDraw, ImageFont
     backgroundColor = (255, 255, 255)
     textColor = (0, 0, 0)
     graphColor = (0, 0, 255)
-    fontSize = height==None and 10 or (height-60)/len(termsList)
+    fontSize = height==None and 12 or (height-60)/len(termsList)
     font = ImageFont.load_default()
     try:
         font = ImageFont.truetype("arial.ttf", fontSize)
@@ -617,7 +627,9 @@ def drawEnrichmentGraphPIL_tostream(termsList, fh, width=None, height=None):
     getMaxTextHeightHint = lambda l: max([font.getsize(t)[1] for t in l])
     getMaxTextWidthHint = lambda l: max([font.getsize(t)[0] for t in l])
     maxFoldWidth = width!=None and min(150, width/6) or 150
-    foldWidths = [int(maxFoldWidth*term[0]) for term in termsList]
+    maxFoldEnrichment = max([t[0] for t in termsList])
+    foldNormalizationFactor = float(maxFoldWidth)/maxFoldEnrichment
+    foldWidths = [int(foldNormalizationFactor*term[0]) for term in termsList]
     treeStep = 10
     treeWidth = {}
     for i, term in enumerate(termsList):
@@ -684,14 +696,17 @@ def drawEnrichmentGraphPIL_tostream(termsList, fh, width=None, height=None):
     horizontalMargin = 0
     #draw.line([(verticalMargin, height - horizontalMargin - legendHeight), (verticalMargin + maxFoldWidth, height - horizontalMargin - legendHeight)], width=1, fill=textColor)
     draw.line([(verticalMargin, horizontalMargin + legendHeight), (verticalMargin + maxFoldWidth, horizontalMargin + legendHeight)], width=1, fill=textColor)
-    for i in range(11):
+    maxLabelWidth = getMaxTextWidthHint([str(i) for i in range(int(maxFoldEnrichment+1))])
+    numOfLegendLabels = max(int(maxFoldWidth/maxLabelWidth), 2)
+    for i in range(numOfLegendLabels+1):
         #draw.line([(verticalMargin + i*maxFoldWidth/10, height - horizontalMargin - legendHeight/2), (verticalMargin + i*maxFoldWidth/10, height - horizontalMargin - legendHeight)], width=1, fill=textColor)
         #draw.text((verticalMargin + i*maxFoldWidth/10 - font.getsize(str(i))[0]/2, height - horizontalMargin - legendHeight/2), str(i), font=font, fill=textColor)
+
+        label = str(int(i*maxFoldEnrichment/numOfLegendLabels))
+        draw.line([(verticalMargin + i*maxFoldWidth/numOfLegendLabels, horizontalMargin + legendHeight/2), (verticalMargin + i*maxFoldWidth/numOfLegendLabels, horizontalMargin + legendHeight)], width=1, fill=textColor)
+        draw.text((verticalMargin + i*maxFoldWidth/numOfLegendLabels - font.getsize(label)[0]/2, horizontalMargin), label, font=font, fill=textColor)        
         
-        draw.line([(verticalMargin + i*maxFoldWidth/10, horizontalMargin + legendHeight/2), (verticalMargin + i*maxFoldWidth/10, horizontalMargin + legendHeight)], width=1, fill=textColor)
-        draw.text((verticalMargin + i*maxFoldWidth/10 - font.getsize(str(i))[0]/2, horizontalMargin), str(i), font=font, fill=textColor)        
-        
-    image.save(fh, "JPEG")
+    image.save(fh)
 
 def __test1():
     setDataDir("E://orangecvs//GOLib//data")
@@ -699,12 +714,16 @@ def __test1():
     loadGO()
     print "Loading annotation"
     loadAnnotation()
-    terms = GOTermFinder(loadedAnnotation.geneNames[:30], aspect="F")
+    print len(loadedAnnotation.geneNames)
+    terms = GOTermFinder(loadedAnnotation.geneNames[:30], aspect="P")
     terms = filterByPValue(terms, 0.1)
+    terms = filterByFrequency(terms, 3)
+    terms = filterByRefFrequency(terms, 5)
     print terms
     try:
-        drawEnrichmentGraph(terms, filename="pict.png", width=400)#, height=1000)
-    except:
+        drawEnrichmentGraph(terms, 30, len(loadedAnnotation.geneNames), filename="pict.png") #, width=400)#, height=1000)
+    except Exception, err:
+        print err
         raw_input()
     
 def __test():
@@ -719,7 +738,7 @@ def __test():
     print "Finding terms"
     print GOTermFinder(loadedAnnotation.geneNames[:20], progressCallback=call)
     print "Finding slim terms"
-    terms = GOTermFinder(loadedAnnotation.geneNames[20:30], slimsOnly=True, aspect="F")
+    terms = GOTermFinder(loadedAnnotation.geneNames[20:30], slimsOnly=True, aspect="P")
     print terms
     drawGOAT(terms)
     print "Finding terms"
