@@ -603,7 +603,7 @@ def drawEnrichmentGraph_tostream(GOTerms, clusterSize, refSize, fh, width=None, 
             ", ".join(GOTerms[term][0]),
             parent)
             )
-        print float(len(GOTerms[term][0])), float(GOTerms[term][2]), clusterSize, refSize
+##        print float(len(GOTerms[term][0])), float(GOTerms[term][2]), clusterSize, refSize
         parent = len(termsList)-1
         for c in getChildren(term):
             collect(c, parent)
@@ -611,7 +611,7 @@ def drawEnrichmentGraph_tostream(GOTerms, clusterSize, refSize, fh, width=None, 
     for topTerm in topLevelTerms:
         collect(topTerm, None)
 
-    drawEnrichmentGraphPIL_tostream(termsList, fh, width, height)        
+    drawEnrichmentGraphPIL_tostream(termsList, fh, width, height)
         
 def drawEnrichmentGraphPIL_tostream(termsList, fh, width=None, height=None):
     from PIL import Image, ImageDraw, ImageFont
@@ -639,19 +639,20 @@ def drawEnrichmentGraphPIL_tostream(termsList, fh, width=None, height=None):
     treeWidth = max(treeWidth) - maxFoldWidth
     verticalMargin = 10
     horizontalMargin = 10
-    print verticalMargin, maxFoldWidth, treeWidth
-    #treeWidth = 100
+##    print verticalMargin, maxFoldWidth, treeWidth
+##    treeWidth = 100
     firstColumnStart = verticalMargin + maxFoldWidth + treeWidth + 10
     secondColumnStart = firstColumnStart + getMaxTextWidthHint([str(t[1]) for t in termsList]+["List"]) + 2
     thirdColumnStart = secondColumnStart + getMaxTextWidthHint([str(t[2]) for t in termsList]+["Total"]) + 2
     fourthColumnStart = thirdColumnStart + getMaxTextWidthHint([str(t[3]) for t in termsList]+["p-value"]) + 4
-    maxAnnotationTextWidth = width==None and getMaxTextWidthHint([str(t[4]) for t in termsList]+["Annotation"]) or (width - fourthColumnStart - verticalMargin) * 2 / 3
+##    maxAnnotationTextWidth = width==None and getMaxTextWidthHint([str(t[4]) for t in termsList]+["Annotation"]) or (width - fourthColumnStart - verticalMargin) * 2 / 3
+    maxAnnotationTextWidth = width==None and getMaxTextWidthHint([str(t[4]) for t in termsList]+["Annotation"]) or max((width - fourthColumnStart - verticalMargin) * 2 / 3, getMaxTextWidthHint([t[5] for t in termsList]+["Annotation"]))
     fifthColumnStart  = fourthColumnStart + maxAnnotationTextWidth + 4
-    maxGenesTextWidth = width==None and getMaxTextWidthHint([str(t[5]) for t in termsList]+["Annotation"]) or (width - fourthColumnStart - verticalMargin) / 3
+    maxGenesTextWidth = width==None and getMaxTextWidthHint([str(t[5]) for t in termsList]+["Genes"]) or (width - fourthColumnStart - verticalMargin) / 3
     
     legendHeight = font.getsize("1234567890")[1]*2
     termHeight = font.getsize("A")[1]
-    print fourthColumnStart, maxAnnotationTextWidth, verticalMargin
+##    print fourthColumnStart, maxAnnotationTextWidth, verticalMargin
     width = fifthColumnStart + maxGenesTextWidth + verticalMargin
     height = len(termsList)*termHeight+2*(legendHeight+horizontalMargin)
 
@@ -696,7 +697,7 @@ def drawEnrichmentGraphPIL_tostream(termsList, fh, width=None, height=None):
     horizontalMargin = 0
     #draw.line([(verticalMargin, height - horizontalMargin - legendHeight), (verticalMargin + maxFoldWidth, height - horizontalMargin - legendHeight)], width=1, fill=textColor)
     draw.line([(verticalMargin, horizontalMargin + legendHeight), (verticalMargin + maxFoldWidth, horizontalMargin + legendHeight)], width=1, fill=textColor)
-    maxLabelWidth = getMaxTextWidthHint([str(i) for i in range(int(maxFoldEnrichment+1))])
+    maxLabelWidth = getMaxTextWidthHint([" "+str(i) for i in range(int(maxFoldEnrichment+1))])
     numOfLegendLabels = max(int(maxFoldWidth/maxLabelWidth), 2)
     for i in range(numOfLegendLabels+1):
         #draw.line([(verticalMargin + i*maxFoldWidth/10, height - horizontalMargin - legendHeight/2), (verticalMargin + i*maxFoldWidth/10, height - horizontalMargin - legendHeight)], width=1, fill=textColor)
@@ -704,7 +705,7 @@ def drawEnrichmentGraphPIL_tostream(termsList, fh, width=None, height=None):
 
         label = str(int(i*maxFoldEnrichment/numOfLegendLabels))
         draw.line([(verticalMargin + i*maxFoldWidth/numOfLegendLabels, horizontalMargin + legendHeight/2), (verticalMargin + i*maxFoldWidth/numOfLegendLabels, horizontalMargin + legendHeight)], width=1, fill=textColor)
-        draw.text((verticalMargin + i*maxFoldWidth/numOfLegendLabels - font.getsize(label)[0]/2, horizontalMargin), label, font=font, fill=textColor)        
+        draw.text((verticalMargin + i*maxFoldWidth/numOfLegendLabels - font.getsize(label)[0]/2, horizontalMargin), label, font=font, fill=textColor)
         
     image.save(fh)
 
@@ -714,14 +715,14 @@ def __test1():
     loadGO()
     print "Loading annotation"
     loadAnnotation()
-    print len(loadedAnnotation.geneNames)
+##    print len(loadedAnnotation.geneNames)
     terms = GOTermFinder(loadedAnnotation.geneNames[:30], aspect="P")
-    terms = filterByPValue(terms, 0.1)
+    terms = filterByPValue(terms, 0.05)
     terms = filterByFrequency(terms, 3)
-    terms = filterByRefFrequency(terms, 5)
+    terms = filterByRefFrequency(terms, 10)
     print terms
     try:
-        drawEnrichmentGraph(terms, 30, len(loadedAnnotation.geneNames), filename="pict.png") #, width=400)#, height=1000)
+        drawEnrichmentGraph(terms, 30, len(loadedAnnotation.geneNames), filename="pict.png", width=400, height=2000) #, width=400)#, height=1000)
     except Exception, err:
         print err
         raw_input()
