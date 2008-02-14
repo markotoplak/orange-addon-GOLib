@@ -769,7 +769,7 @@ void freeMappedStrings(char** ptr){
 		ptr++;
 	}*/
 	free(tmp);
-}	
+}
 
 double* log_sum_lookup(int size){
 	double* data=(double*) malloc(sizeof(double)*(size+1));
@@ -795,17 +795,18 @@ double logbin(int n, int r, double* lookup){
 }
 
 double binomial(int n, int r, double p, double* lookup){
-	if(p==0.0)
+	if(p==0.0){
 		if(r==0.0)
 			return 0.0;
 		else if(r>0.0)
 			return 1.0;
-	else if(p==1.0)
+	}else if(p==1.0){
 		if(n==r)
 			return 1.0;
 		else if(n>r)
 			return 0.0;
-	return exp(logbin(n, r, lookup)+r*log(p)+(n-r)*log(1-p));
+	}
+	return exp(logbin(n, r, lookup)+r*log(p)+(n-r)*log(1.0-p));
 }
 		
 double p_value(int nClusterGenes, int nRefGenes, int nGenesMapped, int numRefGenesMapped, double* lookup){
