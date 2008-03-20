@@ -7,12 +7,14 @@ from urllib import urlretrieve
 import cPickle
 import os
 
-prefix=os.path.split(__file__)[0]
-if prefix:
-    data_dir=prefix+"//data"
-else:
-    data_dir=".//data"
-    
+try:
+    import orngRegistry
+    default_database_path = orngRegistry.bufferDir
+except:
+    default_database_path = (os.path.split(__file__)[0] or ".")
+
+data_dir = default_database_path
+   
 #Currently loaded ontology (GeneOntologyDB)
 loadedGO=None
 
