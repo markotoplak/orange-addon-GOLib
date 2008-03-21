@@ -36,7 +36,7 @@ namespaceDict={
     "molecular_function":4, "F":4}
 
 evidenceDict={"IMP":1, "IGI":2, "IPI":4, "ISS":8, "IDA":16, "IEP":32, "IEA":64,
-              "TAS":128, "NAS":256, "ND":512, "IC":1024, "RCA":2048, "IGC":4096, "RCA":8192}
+              "TAS":128, "NAS":256, "ND":512, "IC":1024, "RCA":2048, "IGC":4096, "RCA":8192, "NR":16384}
 
 evidenceTypesOrdered = [
 'IMP',
@@ -51,7 +51,8 @@ evidenceTypesOrdered = [
 'TAS',
 'NAS',
 'ND',
-'IC'
+'IC',
+'NR'
 ]
 
 evidenceTypes = {
@@ -67,7 +68,8 @@ evidenceTypes = {
 'TAS': 'traceable author statement',
 'NAS': 'non-traceable author statement',
 'ND': 'no biological data available ',
-'IC': 'inferred by curator'
+'IC': 'inferred by curator',
+'NR': 'Not Recorded(Obsolete)'
 }
 
 multiplicitySet=Set(["alt_id","is_a","subset","synonym","related_synonym","exact_synonym","broad_synonym","narrow_synonym",
