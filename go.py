@@ -4,6 +4,7 @@ import _GOLib
 import re
 from sets import Set
 from urllib import urlretrieve
+from collections import defaultdict
 import cPickle
 import os
 
@@ -35,42 +36,62 @@ namespaceDict={
     "cellular_component":2, "C":2,
     "molecular_function":4, "F":4}
 
-evidenceDict={"IMP":1, "IGI":2, "IPI":4, "ISS":8, "IDA":16, "IEP":32, "IEA":64,
-              "TAS":128, "NAS":256, "ND":512, "IC":1024, "RCA":2048, "IGC":4096, "RCA":8192, "NR":16384}
+evidenceTypes = {
+##Experimental
+    'EXP': 'Inferred from Experiment',
+    'IDA': 'Inferred from Direct Assay',
+    'IPI': 'Inferred from Physical Interaction', ## [with <database:protein_name>]',
+    'IMP': 'Inferred from Mutant Phenotype',
+    'IGI': 'Inferred from Genetic Interaction', ## [with <database:gene_symbol[allele_symbol]>]',
+    'IEP': 'Inferred from Expression Pattern',
+##Computational Analysis Evidence Codes
+    'ISS': 'Inferred from Sequence Similarity', ## [with <database:sequence_id>] ',
+    'ISA': 'Inferred from Sequence Alignment',
+    'ISO': 'Inferred from Sequence Orthology',
+    'ISM': 'Inferred from Sequence Model',
+    'IGC': 'Inferred from Genomic Context',
+    'RCA': 'Inferred from Reviewed Computational Analysis',
+##Author Statement Evidence Codes
+    'TAS': 'Traceable author statement',
+    'NAS': 'Non-traceable author statement',
+##Curatorial Statement Evidence Codes
+    'IC': 'Inferred by curator',
+    'ND': 'No biological data available',
+##Computationally-assigned Evidence Codes
+    'IEA': 'Inferred from electronic annotation', ## [to <database:id>]',
+##Obsolete Evidence Codes
+    'NR': 'Not Recorded(Obsolete)'
+}
+##evidenceDict={"IMP":1, "IGI":2, "IPI":4, "ISS":8, "IDA":16, "IEP":32, "IEA":64,
+##              "TAS":128, "NAS":256, "ND":512, "IC":1024, "RCA":2048, "IGC":4096, "RCA":8192, "NR":16384}
+
+evidenceDict=defaultdict(int, [(e, 2**i) for i, e in enumerate(evidenceTypes.keys())])
 
 evidenceTypesOrdered = [
+'EXP',
+'IDA',
+'IPI',
 'IMP',
 'IGI',
-'IPI',
-'ISS',
-'IDA',
 'IEP',
-'IEA',
+##Computational Analysis Evidence Codes
+'ISS',
+'ISA',
+'ISO',
+'ISM',
 'IGC',
 'RCA',
+##Author Statement Evidence Codes
 'TAS',
 'NAS',
-'ND',
+##Curatorial Statement Evidence Codes
 'IC',
+'ND',
+##Computationally-assigned Evidence Codes
+'IEA',
+##Obsolete Evidence Codes
 'NR'
 ]
-
-evidenceTypes = {
-'IMP': 'inferred from mutant phenotype',
-'IGI': 'inferred from genetic interaction', ## [with <database:gene_symbol[allele_symbol]>]',
-'IPI': 'inferred from physical interaction', ## [with <database:protein_name>]',
-'ISS': 'inferred from sequence similarity', ## [with <database:sequence_id>] ',
-'IDA': 'inferred from direct assay',
-'IEP': 'inferred from expression pattern',
-'IEA': 'inferred from electronic annotation', ## [to <database:id>]',
-'IGC': 'Inferred from Genomic Context',
-'RCA': 'inferred from Reviewed Computational Analysis',
-'TAS': 'traceable author statement',
-'NAS': 'non-traceable author statement',
-'ND': 'no biological data available ',
-'IC': 'inferred by curator',
-'NR': 'Not Recorded(Obsolete)'
-}
 
 multiplicitySet=Set(["alt_id","is_a","subset","synonym","related_synonym","exact_synonym","broad_synonym","narrow_synonym",
                      "xref_analog","xref_unknown","relationship"])
@@ -425,6 +446,16 @@ def downloadGO(progressCallback=None):
     match=c.findall(data)
     go=parseGeneOntology(match)
     #cPickle.dump(go, open(data_dir+"gene_ontology.obo.PyOntologyDB", "w"))
+
+def downloadGOTo(filename=None, progressCallback=None):
+    filename=filename or data_dir+"//gene_ontology.obo"
+    urlretrieve("http://www.geneontology.org/ontology/gene_ontology.obo", filename, progressCallback and __progressCallWrapper(progressCallback))
+    file=open(filename)
+    data=file.read()
+    c=re.compile("\[Term\].*?\n\n",re.DOTALL)
+    match=c.findall(data)
+    go=parseGeneOntology(match)
+    #cPickle.dump(go, open(filename+".PyOntologyDB", "w"))
     
 def downloadAnnotation(organism="sgd", progressCallback=None):
     """Downloads the annotation for the specified organism (e.g. "sgd", "fb", "mgi",...)"""
@@ -442,6 +473,20 @@ def downloadAnnotation(organism="sgd", progressCallback=None):
     anno=parseAnnotation(data)
     import cPickle
     cPickle.dump(anno.aliasMapper.keys(), open(data_dir+"//gene_names."+organism, "w"))
+
+def downloadAnnotationTo(organism="sgd", filename=None, progressCallback=None):
+    filename = filename or data_dir+"//gene_association."+organism+".gz"
+    urlretrieve("http://cvsweb.geneontology.org/cgi-bin/cvsweb.cgi/go/gene-associations/gene_association."+organism+".gz?rev=HEAD",
+                filename+".gz", progressCallback and __progressCallWrapper(progressCallback))
+    from gzip import GzipFile
+    gfile=GzipFile(filename+".gz", "r")
+    data=gfile.readlines()
+    file=open(filename,"w")
+    file.writelines(data)
+    #__splitAnnotation(data, organism)
+    anno=parseAnnotation(data)
+    import cPickle
+    cPickle.dump(anno.aliasMapper.keys(), open((os.path.split(filename)[0] or ".") +"//gene_names."+organism, "w"))
 
 def getCachedGeneNames(organism="sgd"):
     import cPickle
