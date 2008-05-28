@@ -12,7 +12,7 @@ try:
     import orngRegistry
     default_database_path = orngRegistry.bufferDir
 except:
-    default_database_path = (os.path.split(__file__)[0] or ".")
+    default_database_path = (os.path.split(__file__)[0] or ".")+"//data"
 
 data_dir = default_database_path
    
@@ -523,7 +523,7 @@ def parseGeneOntology(data, progressCallback=None):
     aliasMapper={}
     goTermDict={}
     datalen=len(data)
-    milestones=Set(range(0,datalen,datalen/10))
+    milestones=Set(range(0,datalen,max(datalen/100,1)))
     for i, term in enumerate(data):
         t=GOTerm(term)
         termDict[t.id]=t
@@ -565,7 +565,7 @@ def parseAnnotation(data, progressCallback=None):
     geneNamesDict={}
     geneAnnotation={}
     datalen=len(data)
-    milestones=Set(range(0,datalen, datalen/10))
+    milestones=Set(range(0,datalen, max(datalen/100,1)))
     for i,line in enumerate(data):
         if line.startswith("!"):
             continue
@@ -578,6 +578,7 @@ def parseAnnotation(data, progressCallback=None):
             for alias in a.alias:
                 aliasMapper[alias]=a.geneName
             aliasMapper[a.geneName]=a.geneName
+            aliasMapper[a.DB_Object_ID]=a.geneName
             names=[a.original[1], a.original[2]]
             names.extend(a.alias)
             for n in names:
@@ -602,8 +603,10 @@ def loadAnnotationFrom(filename, progressCallback=None):
         file=open(filename)
         data=file.readlines()
         anno=parseAnnotation(data, progressCallback)
-        
-    anno.__annotation=_GOLib.parseAnnotation([a.toTuple() for a in anno.annotationList if "NOT" not in a.Qualifier], anno.aliasMapper)
+
+    aa=[a.toTuple() for a in anno.annotationList if "NOT" not in a.Qualifier]
+    aa.sort()
+    anno.__annotation=_GOLib.parseAnnotation(aa, anno.aliasMapper)
     #anno.__annotation.aliasMapper=anno.aliasMapper
     anno.__file__=filename
     return anno
