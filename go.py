@@ -463,7 +463,7 @@ def downloadAnnotation(organism="sgd", progressCallback=None):
     #urlretrieve("http://www.geneontology.org/cgi-bin/downloadGOGA.pl/gene_association."+organism+".gz",
     #            data_dir+"//gene_association."+organism+".gz", progressCallback and __progressCallWrapper(progressCallback))
     urlretrieve("http://cvsweb.geneontology.org/cgi-bin/cvsweb.cgi/go/gene-associations/gene_association."+organism+".gz?rev=HEAD",
-                os.path.join(data_dir,"//gene_association."+organism+".gz"), progressCallback and __progressCallWrapper(progressCallback))
+                os.path.join(data_dir,"gene_association."+organism+".gz"), progressCallback and __progressCallWrapper(progressCallback))
     from gzip import GzipFile
     gfile=GzipFile(os.path.join(data_dir, "gene_association."+organism+".gz"),"r")
     data=gfile.readlines()
@@ -810,7 +810,7 @@ if not listDownloadedOrganisms():
     print "You can download annotations using the downloadAnnotation function."
     print "e.g. go.downloadAnnotation('sgd')"
 try:
-    open(os.path.join(data_dir, "//gene_ontology.obo"))
+    open(os.path.join(data_dir, "gene_ontology.obo"))
 except:
     print "Warning!!! No downloaded ontology found!!!"
     print "You can download it using the downloadGO function."
