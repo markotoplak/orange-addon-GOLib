@@ -12,7 +12,7 @@ try:
     import orngRegistry
     default_database_path = orngRegistry.bufferDir
 except:
-    default_database_path = os.path.join((os.path.split(__file__)[0] or "."),"//data")
+    default_database_path = os.path.join((os.path.split(__file__)[0] or "."),"data")
 
 data_dir = default_database_path
    
@@ -448,7 +448,7 @@ def downloadGO(progressCallback=None):
     #cPickle.dump(go, open(data_dir+"gene_ontology.obo.PyOntologyDB", "w"))
 
 def downloadGOTo(filename=None, progressCallback=None):
-    filename=filename or os.path.join(data_dir,"//gene_ontology.obo")
+    filename=filename or os.path.join(data_dir,"gene_ontology.obo")
     urlretrieve("http://www.geneontology.org/ontology/gene_ontology.obo", filename, progressCallback and __progressCallWrapper(progressCallback))
     file=open(filename)
     data=file.read()
@@ -486,7 +486,7 @@ def downloadAnnotationTo(organism="sgd", filename=None, progressCallback=None):
     #__splitAnnotation(data, organism)
     anno=parseAnnotation(data)
     import cPickle
-    cPickle.dump(anno.aliasMapper.keys(), open((os.path.split(filename)[0] or ".") +"//gene_names."+organism, "w"))
+    cPickle.dump(anno.aliasMapper.keys(), open((os.path.split(filename)[0] or ".") +"gene_names."+organism, "w"))
 
 def getCachedGeneNames(organism="sgd"):
     import cPickle
