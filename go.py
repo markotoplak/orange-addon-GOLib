@@ -221,6 +221,8 @@ class GOTerm:
         
     def toTuple(self):
         return (self.GOId, self.parents)
+    
+_re_obj_name_ = re.compile("([a-zA-z0-9-_]+)")
 
 class Annotation:
     """Holds the data for an annotation record read from the annotation file. Fields can be
@@ -239,9 +241,13 @@ class Annotation:
         self.GOId=self.original[4].strip(" ")
         self.evidence=self.original[6].strip(" ")
         self.aspect=self.original[8].strip(" ")
-        self.alias=self.original[10].split("|")
+        self.alias=self.original[10].split("|") 
         for key, val in zip(annotationFields, self.original):
             self.__dict__[key]=val
+
+        self.aditionalAliases = []
+        if ":" in self.DB_Object_Name:
+            self.aditionalAliases = _re_obj_name_.findall(self.DB_Object_Name.split(":")[0])
 
     def __getattr__(self, name):
         if name in annotationFieldsDict:
@@ -576,6 +582,8 @@ def parseAnnotation(data, progressCallback=None):
             geneNames.add(a.geneName)
             geneAnnotation[a.geneName]=[a]
             for alias in a.alias:
+                aliasMapper[alias]=a.geneName
+            for alias in a.aditionalAliases:
                 aliasMapper[alias]=a.geneName
             aliasMapper[a.geneName]=a.geneName
             aliasMapper[a.DB_Object_ID]=a.geneName
