@@ -234,7 +234,7 @@ otherwise all GO terms are considered. The progressCallback if present will be c
 The method returns a dictionary of significant GO terms, items are tuples ([geneName, ...], p-value, nRef) where 
 <ul>
   <li>[geneName, ...] is a list of cluster genes that map to the selected term</li>
-  <li>p-value is the probability that the mapping of the genes to this term is a complete coincidence given the reference distribution</li>
+  <li>p-value is the probability that the mapping of the genes to this term is a coincidence given the reference distribution computed using a binomial distribution.</li>
   <li>nRef is the number of reference genes that map to the term</li>
 </ul>
 </p>
