@@ -12,7 +12,7 @@ try:
     import orngOrangeFoldersQt4
     default_database_path = orngOrangeFoldersQt4.__getDirectoryNames()['bufferDir']
 except:
-    default_database_path = os.path.join((os.path.split(__file__)[0] or "."),"data")
+    default_database_path = os.path.join((os.path.split(__file__)[0] or "."), "data")
 
 data_dir = default_database_path
    
@@ -137,7 +137,7 @@ def __evidenceToList(evidenceCode):
             evidence.append(key)
     return evidence
 
-class AnnotationDB:
+class AnnotationDB(object):
     """An object holding the annotation database.
     members:
         -geneNames      -- Names of all the genes in the annotation
@@ -153,7 +153,7 @@ class AnnotationDB:
     geneNamesDict=None      #a dictionary mapping any known alias to a list [DB_Object_ID, DB_Object_Symbol [,DB_Object_Synonym]] i.e. all known names
     geneAnnotations=None    #a dictionary mapping gene name (DB_Object_Symbol) to a list of all instances of Annotation with this name
 
-class GeneOntologyDB:
+class GeneOntologyDB(object):
     """An object holding the ontology database.
     members:
         -terms              - List of instances of GOTerm class holding the details for each term
@@ -167,10 +167,10 @@ class GeneOntologyDB:
     termDescriptorDict=None #a dictionary mapping GO id's and alt_id's to a tuple (id, namespace, def, alt_id)
     aliasMapper=None        #a dictionary mapping alt_id's and id's to id's
 
-class GOTerm:
+class GOTerm(object):
     """Holds the data for one term read from the ontology file. All fields from the ontology can be accsessed by their
     original name (e.g. the is_a field in the ontology can be accsessed like term.is_a), except for the def field that
-    interferes with the python def statment and can be accesed like term._def or term.__dict__['def'].
+    interferes with the python def statment and can be accesed like term.def_ or term.__dict__['def'].
     The fields that can have multiple values are stored as lists of strings otherwise the string after the field name from the
     ontology is supplied. If a field is not defined accessing it will result in an exception.
     The object also provides the folowing data memebers for quicker accsess: GOId, aspect, parents(list of GOId's of parents terms)."""
@@ -214,7 +214,7 @@ class GOTerm:
         self.fullText+=text
 
     def __getattr__(self, name):
-        if name=="_def":
+        if name=="def_":
             return self.__dict__["def"]
         else:
             raise AttributeError(name)
@@ -224,7 +224,7 @@ class GOTerm:
     
 _re_obj_name_ = re.compile("([a-zA-z0-9-_]+)")
 
-class Annotation:
+class Annotation(object):
     """Holds the data for an annotation record read from the annotation file. Fields can be
     accessed with the names: DB, DB_Object_ID, DB_Object_Symbol, Qualifier, GO_ID, DB_Reference,
     Evidence_code, With_or_From, Aspect, DB_Object_Name, DB_Object_Synonym, DB_Object_Type, taxon,
@@ -445,15 +445,17 @@ class __progressCallWrapper:
             
 def downloadGO(progressCallback=None):
     """Downloads the curent gene ontology from http://www.geneontology.org/ontology/gene_ontology.obo"""
-    urlretrieve("http://www.geneontology.org/ontology/gene_ontology.obo", os.path.join(data_dir, "gene_ontology.obo"), progressCallback and __progressCallWrapper(progressCallback))
-    file=open(os.path.join(data_dir,"gene_ontology.obo"))
-    data=file.read()
-    c=re.compile("\[Term\].*?\n\n",re.DOTALL)
-    match=c.findall(data)
-    go=parseGeneOntology(match)
+    downloadGOTo(progressCallback=None)
+##    urlretrieve("http://www.geneontology.org/ontology/gene_ontology.obo", os.path.join(data_dir, "gene_ontology.obo"), progressCallback and __progressCallWrapper(progressCallback))
+##    file=open(os.path.join(data_dir,"gene_ontology.obo"))
+##    data=file.read()
+##    c=re.compile("\[Term\].*?\n\n",re.DOTALL)
+##    match=c.findall(data)
+##    go=parseGeneOntology(match)
     #cPickle.dump(go, open(data_dir+"gene_ontology.obo.PyOntologyDB", "w"))
 
 def downloadGOTo(filename=None, progressCallback=None):
+    """Downloads the curent gene ontology from http://www.geneontology.org/ontology/gene_ontology.obo, to filename"""
     filename=filename or os.path.join(data_dir,"gene_ontology.obo")
     urlretrieve("http://www.geneontology.org/ontology/gene_ontology.obo", filename, progressCallback and __progressCallWrapper(progressCallback))
     file=open(filename)
@@ -468,7 +470,7 @@ def downloadAnnotation(organism="sgd", progressCallback=None):
         
     #urlretrieve("http://www.geneontology.org/cgi-bin/downloadGOGA.pl/gene_association."+organism+".gz",
     #            data_dir+"//gene_association."+organism+".gz", progressCallback and __progressCallWrapper(progressCallback))
-    urlretrieve("http://cvsweb.geneontology.org/cgi-bin/cvsweb.cgi/go/gene-associations/gene_association."+organism+".gz?rev=HEAD",
+    urlretrieve("http://www.geneontology.org/gene-associations/gene_association."+organism+".gz",
                 os.path.join(data_dir,"gene_association."+organism+".gz"), progressCallback and __progressCallWrapper(progressCallback))
     from gzip import GzipFile
     gfile=GzipFile(os.path.join(data_dir, "gene_association."+organism+".gz"),"r")
@@ -482,7 +484,7 @@ def downloadAnnotation(organism="sgd", progressCallback=None):
 
 def downloadAnnotationTo(organism="sgd", filename=None, progressCallback=None):
     filename = filename or os.path.join(data_dir, "gene_association."+organism+".gz")
-    urlretrieve("http://cvsweb.geneontology.org/cgi-bin/cvsweb.cgi/go/gene-associations/gene_association."+organism+".gz?rev=HEAD",
+    urlretrieve("http://www.geneontology.org/gene-associations/gene_association."+organism+".gz",
                 filename+".gz", progressCallback and __progressCallWrapper(progressCallback))
     from gzip import GzipFile
     gfile=GzipFile(filename+".gz", "r")
@@ -492,7 +494,7 @@ def downloadAnnotationTo(organism="sgd", filename=None, progressCallback=None):
     #__splitAnnotation(data, organism)
     anno=parseAnnotation(data)
     import cPickle
-    cPickle.dump(anno.aliasMapper.keys(), open((os.path.split(filename)[0] or ".") +"gene_names."+organism, "w"))
+    cPickle.dump(anno.aliasMapper.keys(), open(os.path.join((os.path.split(filename)[0] or "."), "gene_names."+organism), "w"))
 
 def getCachedGeneNames(organism="sgd"):
     import cPickle
