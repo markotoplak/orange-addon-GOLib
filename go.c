@@ -7,6 +7,7 @@
 #ifndef MAX
 #define MAX(a,b) (((a)<(b))?(b):(a))
 #endif
+
 struct _TermNode;
 typedef struct _TermNode{
 	char* id;
@@ -613,14 +614,14 @@ void _slimMapping1(GOTerm* term, Ontology* ontology, Ontology* slimOntology, Ter
 		}
 		
 		if(getGOTerm(slimOntology, parent->goID)!=HASH_MISS && parent->visited==0){
-			/*if the parent in the slims subset and not jet visited
+			/*if the parent in the slims subset and not yet visited
 			mark it and add it to the list and recursivly mark ALL parents of 
 			a term to map indirectly, including the ones that are allready marked as direct*/
 			parent->visited=DIRECT_MAPPING;
 			addTermNode(list, makeTermNode(parent->goID));
 			_slimMapping2(parent, ontology, slimOntology, list);
 		}else if(parent->visited==0)
-			/*else if not jet visited, NOTE:do nothing if term allready visited*/
+			/*else if not yet visited, NOTE:do nothing if term allready visited*/
 			_slimMapping1(parent, ontology, slimOntology, list);
 		parentNode=parentNode->next;
 	}
@@ -877,8 +878,10 @@ PyObject* GOTermFinder(PyObject *self, PyObject* args){
 			numMapped++;
 			ptr=ptr->next;
 		}
-		pValue=p_value(numGenes, numRefGenes, numMapped,  term->numRef, loglookup);
-		PyDict_SetItemString(result, term->goID, Py_BuildValue("Odi", geneList, pValue, term->numRef));
+		pValue = p_value(numGenes, numRefGenes, numMapped,  term->numRef, loglookup);
+		PyObject* value = Py_BuildValue("Odi", geneList, pValue, term->numRef);
+		PyDict_SetItemString(result, term->goID, value);
+		Py_DECREF(value);
 		Py_DECREF(geneList);
 		node=node->next;
 	}
